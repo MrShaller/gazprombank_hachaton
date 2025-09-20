@@ -1,4 +1,3 @@
-# src/clause/splitter.py
 import re
 from typing import List, Tuple
 
@@ -10,8 +9,13 @@ CLAUSE_HINTS = r"\b(что|если|когда|потому что|так как
 
 # Аббревиатуры/сокращения, которые не должны резаться по точкам
 ABBR_PATTERNS = [
-    r"\bт\.\s?д\.", r"\bт\.\s?п\.", r"\bи\.\s?т\.\s?д\.", r"\bи\.\s?т\.\s?п\.",
-    r"\bг\.", r"\bул\.", r"\bпр\.", r"\bстр\.", r"\bдолл?\.", r"\bруб\.", r"\bмлн\.", r"\bмлрд\."
+    r"\bт\.\s?к\.",                     # т.к.
+    r"\bт\.\s?д\.", r"\bт\.\s?п\.",     # т.д., т.п.
+    r"\bи\.\s?т\.\s?д\.", r"\bи\.\s?т\.\s?п\.",  # и т.д., и т.п.
+    r"\bг\.", r"\bул\.", r"\bпр\.", r"\bстр\.", r"\bдолл?\.", r"\bруб\.", r"\bмлн\.", r"\bмлрд\.",
+    r"\bдоп\.",
+    # общий «страховочный» паттерн для двухбуквенных русских сокращений вида X. Y.
+    r"\b[А-Яа-яЁё]\.\s?[А-Яа-яЁё]\."    # напр., т. к., п. п.
 ]
 
 # Плейсхолдеры
@@ -19,12 +23,28 @@ PH_ABBR = "__ABBR{}__"
 PH_NUM = "__NUM{}__"
 PH_NO  = "__NO{}__"
 
+def _precanon_abbrs(text: str) -> str:
+    # схлопнуть варианты «т . к .», «т. К.» → «т.к.» (и аналогично для т.д., т.п.)
+    pairs = [
+        (r"[тТ]\s?\.\s?[кК]\s?\.", "т.к."),
+        (r"[тТ]\s?\.\s?[дД]\s?\.", "т.д."),
+        (r"[тТ]\s?\.\s?[пП]\s?\.", "т.п."),
+        (r"[иИ]\s?\.\s?[тТ]\s?\.\s?[дД]\s?\.", "и т.д."),
+        (r"[иИ]\s?\.\s?[тТ]\s?\.\s?[пП]\s?\.", "и т.п."),
+        (r"[дД]\s?оп\s?\.", "доп.")
+    ]
+    for pat, rep in pairs:
+        text = re.sub(pat, rep, text)
+    return text
+
 def _protect(text: str) -> Tuple[str, dict]:
     """
     Заменяет аббревиатуры, сложные числа/валюты и конструкции '№ 928*****'
     на плейсхолдеры, чтобы не порезать их при сплите. Возвращает (text, mapping).
     """
     mapping = {}
+
+    text = _precanon_abbrs(text)
 
     # 1) Аббревиатуры
     idx = 0
@@ -141,45 +161,90 @@ def _split_by_commas(sentence: str) -> List[str]:
     out = [c.strip(" ,;—-") for c in out if len(c.strip(" ,;—-").split()) >= 3]
     return out if out else [sentence.strip()]
 
+CONNECTIVE_ONLY = re.compile(
+    r"^(?:и|а|но|однако|хотя|зато|при этим|при этом|с другой стороны)\.?$",
+    flags=re.IGNORECASE
+)
+
+DUP_CONNECTIVE = re.compile(
+    r"\b(при этом|однако|но|хотя|зато|с другой стороны)\b(\s+\1\b)+",
+    flags=re.IGNORECASE
+)
+
+MIN_WORDS = 3 
+
 def _post_merge_short(clauses: List[str]) -> List[str]:
     """
-    Склеиваем слишком короткие куски (<=2 слова или только пунктуация)
-    с левым/правым соседом, чтобы убрать 'Программе.', '.', '!' и т.п.
+    Склеиваем коротыши (<=2 слова), чистую пунктуацию и 'голые' связки
+    с соседями; убираем дубли связок внутри клаузы.
     """
     if not clauses:
         return clauses
-    clean = []
 
     def too_short(c: str) -> bool:
-        words = [w for w in re.findall(r"\w+", c, flags=re.UNICODE)]
+        # ≤2 слова ИЛИ одиночная буква/сокр. типа "доп." ИЛИ чистая пунктуация
+        if re.fullmatch(r"[.!?]+", c.strip()):
+            return True
+        if re.fullmatch(r"[A-Za-zА-Яа-яЁё]\.?$", c.strip()):
+            return True
+        words = re.findall(r"\w+", c, flags=re.UNICODE)
         return len(words) <= 2
 
+    clean: List[str] = []
     i = 0
     while i < len(clauses):
         c = clauses[i].strip()
-        if too_short(c) or re.fullmatch(r"[.!?]+", c):
-            # Пытаемся слить с правым, иначе с левым
-            merged = None
+
+        is_connective = CONNECTIVE_ONLY.match(c) is not None
+        is_tiny = too_short(c)
+
+        if is_tiny or is_connective:
+            # склеиваем с правым; если правого нет — к левому
             if i + 1 < len(clauses):
                 merged = (c + " " + clauses[i + 1]).strip()
-                i += 2
+                # схлопываем дубли связок ("при этом при этом" → "при этом")
+                merged = DUP_CONNECTIVE.sub(r"\1", merged)
                 clean.append(merged)
+                i += 2
                 continue
             elif clean:
-                clean[-1] = (clean[-1] + " " + c).strip()
+                clean[-1] = DUP_CONNECTIVE.sub(r"\1", (clean[-1] + " " + c).strip())
                 i += 1
                 continue
             else:
-                # одиночный коротыш — пропускаем
                 i += 1
                 continue
-        # Нормальная клауза
-        # Убираем служебное начало вроде "и", "а", "да и" если оно тянется из середины
+
+        # нормальная клауза: прибираем служебное начало "и|а|да и"
         c = re.sub(r"^(и|а|да и)\s+", "", c, flags=re.IGNORECASE)
-        clean.append(c)
+        c = re.sub(r"\s+", " ", c).strip(" ,;—-")
+        c = DUP_CONNECTIVE.sub(r"\1", c)
+        if c:
+            clean.append(c)
         i += 1
 
+    # финальная чистка
     return [re.sub(r"\s+", " ", c).strip(" ,;—-") for c in clean if c.strip()]
+
+def _final_prune(clauses: List[str]) -> List[str]:
+    out = []
+    for i, c in enumerate(clauses):
+        c_stripped = c.strip()
+        # если это чистая связка — не тащим в конец
+        if CONNECTIVE_ONLY.match(c_stripped):
+            # если есть правый сосед — уже склеили раньше; тут просто пропускаем
+            continue
+        # коротыш без соседей — выбрасываем
+        words = re.findall(r"\w+", c_stripped, flags=re.UNICODE)
+        if len(words) < MIN_WORDS:
+            # попробуем слить с левым, если он есть
+            if out:
+                out[-1] = re.sub(r"\s+", " ", (out[-1] + " " + c_stripped)).strip(" ,;—-")
+                out[-1] = DUP_CONNECTIVE.sub(r"\1", out[-1])
+            # иначе просто пропускаем
+            continue
+        out.append(c_stripped)
+    return out
 
 def split_into_clauses(text: str) -> List[str]:
     text = _normalize(text)
@@ -197,10 +262,14 @@ def split_into_clauses(text: str) -> List[str]:
     # восстанавливаем плейсхолдеры
     clauses = [_unprotect(c, mapping) for c in clauses]
 
-    # финальная чистка и удаление дублей подряд
+    # финальная чистка, удаление дублей
     cleaned = []
     for c in clauses:
         c = re.sub(r"\s+", " ", c).strip(" ,;—-")
         if c and (not cleaned or cleaned[-1] != c):
             cleaned.append(c)
+
+    # выкинуть остаточные «крошки» и голые связки
+    cleaned = _final_prune(cleaned)
+
     return cleaned
