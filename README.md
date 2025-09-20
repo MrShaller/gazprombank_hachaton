@@ -46,3 +46,5 @@ gazprombank_hachaton/
    git clone https://github.com/MrShaller/gazprombank_hachaton
    cd gazprombank_hachaton
 
+## Для себя:
+   Чтобы вызвать python scripts/prepare_dataset.py -> нужно в data/raw/..... <<<< сюда поместить что-то
