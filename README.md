@@ -9,7 +9,7 @@
 
 ## 📂 Структура проекта
 ```
-bank-reviews-classifier/
+gazprombank_hachaton/
 ├── configs/ # Конфигурации проекта
 │ ├── topics.yml # Список тем + синонимы (онтология)
 │ ├── stopwords.txt # Основной список стоп-слов
@@ -43,7 +43,6 @@ bank-reviews-classifier/
 
 1. Склонировать репозиторий:
    ```bash
-   git clone https://github.com/<твой-ник>/bank-reviews-classifier.git
-   cd bank-reviews-classifier
+   git clone https://github.com/MrShaller/gazprombank_hachaton
+   cd gazprombank_hachaton
 
-new_text
