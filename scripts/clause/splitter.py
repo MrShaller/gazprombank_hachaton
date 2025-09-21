@@ -111,7 +111,7 @@ def _normalize(text: str) -> str:
 
 def _split_sentences(text: str) -> List[str]:
     # Сплит по финальной пунктуации, НО плейсхолдеры уже защищены
-    parts = re.split(r"(?<=[.!?…])\s+|\n+", text)
+    parts = re.split(r"(?<=[.!?…])\s+|(?<=[.!?…])(?=\S)|\n+", text)
     return [p.strip() for p in parts if p.strip()]
 
 def _split_by_contrast(sentence: str) -> List[str]:
