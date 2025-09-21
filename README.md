@@ -23,14 +23,22 @@ gazprombank_hachaton/
 ├── reports/ # Результаты
 │
 │
-└── scripts/ # Исходный код
-├── 
-│ └── 
+├── scripts/ # Исходный код
+│ ├── clause/
+│ │ └── splitter.py - Сплиттер текста на клаузы 
+│ ├── match_topics/ - 
+│ │ ├── topic_matcher.py - # Функции: загрузка topics.yml для создания валидационного датасета
+│ │ └── topic_matcher_all.py - Батч-скрипт: data/interim/clauses.csv → ..._with_topics.csv
+│ ├── parsers/ - парсеры
+│ │ ├── 
+│ │ └──
+│ ├── sentiments/ 
+│ │ ├── sentiment_rules.py # Лексиконный скорер: POS/NEG слова/фразы, инверсия "не", усилители
+│ │ └── sentiment_all.py # Батч-скрипт: ..._with_topics.csv → ..._sentiment.csv (70/30 смесь)
+│ └── prepare_dataset.py - 
+│  
 │
-├── 
-│ └── 
-│
-├── 
+├── tests/
 │
 ├── 
 │
