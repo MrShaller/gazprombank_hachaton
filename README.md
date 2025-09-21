@@ -48,3 +48,7 @@ gazprombank_hachaton/
 
 ## Для себя:
    Чтобы вызвать python scripts/prepare_dataset.py -> нужно в data/raw/..... <<<< сюда поместить что-то
+
+   Путь такой -> scripts/prepare_dataset.py (он вызывает clause/splitter.py)
+                 scripts/match_topics/topic_matcher_all.py -> приписывает топики по правилам из topics.yml <- пока что работает плохо, это перед обучением модели + валидация
+                 scripts/sentiments/sentiment_all.py -> приписывает тональность всем клаузам из interim по правилам в sentiment_rules.py <- тоже работает пока так себе
