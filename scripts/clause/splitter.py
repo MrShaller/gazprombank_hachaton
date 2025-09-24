@@ -44,9 +44,9 @@ RU_STOP = set("""
 да или либо то есть это тот та те о об от до из из-за за для при по на со соотв то есть т е и т д
 """.split())
 
-MIN_WORDS = 5
-MIN_WORDS_COMMA = 5
-MIN_WORDS_SHORT_GLUE = 4
+MIN_WORDS = 7
+MIN_WORDS_COMMA = 6
+MIN_WORDS_SHORT_GLUE = 5
 
 CONNECTIVE_ONLY = re.compile(
     r"^(?:и|а|но|однако|хотя|зато|при этом|с другой стороны)\.?$",
