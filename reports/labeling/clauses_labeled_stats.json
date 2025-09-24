@@ -1,0 +1,28 @@
+{
+  "total_clauses": 100,
+  "clauses_with_topics": 53,
+  "clauses_with_sentiments": 53,
+  "clauses_with_full_context": 100,
+  "clauses_with_equal_counts": 100,
+  "equal_counts_percentage": 100.0,
+  "topic_distribution": {
+    "Автокредит": 14,
+    "Обслуживание": 14,
+    "Потребительский кредит": 10,
+    "Другое": 9,
+    "Мобильное приложение": 7,
+    "Дебетовая карта": 2,
+    "Дистанционное обслуживание": 1,
+    "Денежные переводы": 1
+  },
+  "sentiment_distribution": {
+    "отрицательно": 33,
+    "нейтрально": 23,
+    "положительно": 2
+  },
+  "avg_topics_per_clause": 0.58,
+  "avg_sentiments_per_clause": 0.58,
+  "execution_time_seconds": 1228.8709921836853,
+  "execution_time_minutes": 20.481183203061423,
+  "avg_time_per_clause": 12.288709921836853
+}
