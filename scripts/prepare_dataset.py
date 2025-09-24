@@ -27,6 +27,17 @@ def get_field(rec: Dict[str, Any], names: List[str], default=None):
             return rec[n]
     return default
 
+def get_review_date(rec: Dict[str, Any]) -> str:
+    """
+    Достаём дату отзыва. Оставляем как есть (без нормализации).
+    При необходимости список ключей можно сузить до 'review_date'.
+    """
+    return get_field(
+        rec,
+        ["review_date"],
+        "",
+    )
+
 def ensure_review_id(rec: Dict[str, Any]) -> str:
     rid = get_field(rec, ["review_id", "rewied_id", "rewiew_id", "id", "reviewId"])
     if rid is None:
@@ -67,10 +78,13 @@ def prepare_one_file(file_path: Path, writer: csv.DictWriter, batch_size: int = 
             continue
 
         review_id = ensure_review_id(rec)
-        url = get_field(rec, ["url"], "")
-        parsed_at = get_field(rec, ["parsed_at", "parsedAt"], "")
-        bank_name = get_field(rec, ["bank_name", "bankName"], "")
-        product_type = get_field(rec, ["product_type", "productType"], "")
+        review_date = get_review_date(rec)
+
+        # можно добавить сюда и другие поля, если решишь писать их в CSV
+        # url = get_field(rec, ["url"], "")
+        # parsed_at = get_field(rec, ["parsed_at", "parsedAt"], "")
+        # bank_name = get_field(rec, ["bank_name", "bankName"], "")
+        # product_type = get_field(rec, ["product_type", "productType"], "")
 
         clauses = split_into_clauses(text)
         for i, cl in enumerate(clauses):
@@ -78,8 +92,8 @@ def prepare_one_file(file_path: Path, writer: csv.DictWriter, batch_size: int = 
                 "source_file": file_path.name,
                 "review_id": review_id,
                 "clause_id": i,
-                "global_id": f"{review_id}:{i}",
-                "clause": light_clean(cl),  # или без clean, как хочешь
+                "review_date": review_date,
+                "clause": light_clean(cl),
             }
             batch_rows.append(row)
 
@@ -97,8 +111,11 @@ def main():
 
     # если файла нет — создаём с заголовком; если есть — перезапишем (чистый старт)
     fieldnames = [
-    "source_file", "review_id", "clause_id", "global_id",
-    "clause"   # одна колонка
+        "source_file",
+        "review_id",
+        "clause_id",
+        "review_date",
+        "clause",
     ]
     with OUT_PATH.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
