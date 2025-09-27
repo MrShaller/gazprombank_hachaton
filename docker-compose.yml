@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:14-alpine
+    container_name: gazprombank_postgres
+    environment:
+      POSTGRES_DB: gazprombank_reviews
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    networks:
+      - gazprombank_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gazprombank_reviews"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gazprombank_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gazprombank_reviews
+      DEBUG: "false"
+      APP_NAME: "Gazprombank Reviews Dashboard API"
+      APP_VERSION: "1.0.0"
+    volumes:
+      - ./data:/app/data:ro  # Монтируем данные только для чтения
+      - ./backend/app:/app/app:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - gazprombank_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gazprombank_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    networks:
+      - gazprombank_network
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ETL сервис (запускается один раз для загрузки данных)
+  etl:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gazprombank_etl
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gazprombank_reviews
+    volumes:
+      - ./data:/app/data:ro
+      - ./backend/app:/app/app:ro
+    networks:
+      - gazprombank_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "run_etl.py", "--data-path", "/app/data/raw/banki_ru"]
+    restart: "no"  # Запускается только один раз
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  gazprombank_network:
+    driver: bridge
