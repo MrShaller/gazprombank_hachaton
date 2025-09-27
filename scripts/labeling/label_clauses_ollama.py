@@ -436,7 +436,7 @@ def main():
     output_file = str(project_root / "data/processed/labeling/clauses_labeled.json")
     
     # Параметры обработки
-    TEST_SIZE = 100  # Количество клауз для тестирования (легко изменить)
+    TEST_SIZE = None  # Количество клауз для тестирования (легко изменить) None для всех
     
     try:
         # Засекаем время начала
@@ -452,8 +452,9 @@ def main():
         merged_json_path = str(project_root / "data/raw/merged.json")
         labeler.load_review_texts(merged_json_path)
         
-        # Обрабатываем первые TEST_SIZE клауз
-        results = labeler.process_clauses_batch(clauses_df, start_idx=0, batch_size=TEST_SIZE)
+        # Обрабатываем клаузы (все если TEST_SIZE=None)
+        batch_size = len(clauses_df) if TEST_SIZE is None else TEST_SIZE
+        results = labeler.process_clauses_batch(clauses_df, start_idx=0, batch_size=batch_size)
         
         # Засекаем время окончания
         end_time = time.time()

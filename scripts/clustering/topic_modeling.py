@@ -76,13 +76,20 @@ class TopicModeling:
         }
         self.stop_words.update(banking_stopwords)
         
-    def load_data(self):
-        """Загрузка данных из JSON файла"""
+    def load_data(self, max_samples=40000):
+        """Загрузка данных из JSON файла с ограничением размера выборки"""
         print("Загружаем данные...")
         with open(self.data_path, 'r', encoding='utf-8') as f:
             self.data = json.load(f)
         
         self.df = pd.DataFrame(self.data)
+        
+        # Ограничиваем размер выборки для избежания проблем с памятью
+        if len(self.df) > max_samples:
+            print(f"Данных слишком много ({len(self.df)}), берем случайную выборку из {max_samples} отзывов")
+            self.df = self.df.sample(n=max_samples, random_state=42).reset_index(drop=True)
+            self.data = self.df.to_dict('records')
+        
         print(f"Загружено {len(self.df)} отзывов")
         
     def preprocess_text(self, text):

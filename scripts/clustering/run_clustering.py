@@ -19,7 +19,7 @@ sys.path.append(str(project_root))
 def main():
     parser = argparse.ArgumentParser(description='Запуск тематической кластеризации отзывов')
     parser.add_argument('--data-path', 
-                       default=str(project_root / 'data/raw/sravni_ru/sravni_ru.json'),
+                       default=str(project_root / 'data/raw/merged (1).json'),
                        help='Путь к файлу с данными')
     parser.add_argument('--methods', 
                        nargs='+',
@@ -78,16 +78,18 @@ def run_embedding_clustering(data_path, quick=False, no_viz=False):
         from embedding_clustering import EmbeddingClustering
         
         clustering = EmbeddingClustering(data_path)
-        clustering.load_data()
         
-        # Быстрый режим - ограничиваем данные
+        # Загружаем данные с ограничением для избежания проблем с памятью
+        max_samples = 1000 if quick else 10000
+        clustering.load_data(max_samples=max_samples)
+        
         if quick:
-            clustering.data = clustering.data[:1000]
-            clustering.df = clustering.df.head(1000)
-            print("  ⚡ Быстрый режим: используем первые 1000 отзывов")
+            print("  ⚡ Быстрый режим: используем до 1000 отзывов")
+        else:
+            print("  📊 Обычный режим: используем до 10000 отзывов")
         
         clustering.load_model('cointegrated/rubert-tiny2')  # Быстрая модель
-        clustering.create_embeddings()
+        clustering.create_embeddings(batch_size=16)  # Уменьшаем размер батча
         clustering.perform_clustering()
         clustering.analyze_clusters()
         
@@ -110,13 +112,15 @@ def run_topic_modeling(data_path, quick=False, no_viz=False):
         from topic_modeling import TopicModeling
         
         topic_modeling = TopicModeling(data_path)
-        topic_modeling.load_data()
         
-        # Быстрый режим
+        # Загружаем данные с ограничением для избежания проблем с памятью
+        max_samples = 1000 if quick else 40000
+        topic_modeling.load_data(max_samples=max_samples)
+        
         if quick:
-            topic_modeling.data = topic_modeling.data[:1000]
-            topic_modeling.df = topic_modeling.df.head(1000)
-            print("  ⚡ Быстрый режим: используем первые 1000 отзывов")
+            print("  ⚡ Быстрый режим: используем до 1000 отзывов")
+        else:
+            print("  📊 Обычный режим: используем до 10000 отзывов")
         
         topic_modeling.prepare_texts()
         
@@ -152,13 +156,15 @@ def run_tfidf_clustering(data_path, quick=False, no_viz=False):
         from tfidf_clustering import TfIdfClustering
         
         clustering = TfIdfClustering(data_path)
-        clustering.load_data()
         
-        # Быстрый режим
+        # Загружаем данные с ограничением для избежания проблем с памятью
+        max_samples = 1000 if quick else 40000
+        clustering.load_data(max_samples=max_samples)
+        
         if quick:
-            clustering.data = clustering.data[:1000]
-            clustering.df = clustering.df.head(1000)
-            print("  ⚡ Быстрый режим: используем первые 1000 отзывов")
+            print("  ⚡ Быстрый режим: используем до 1000 отзывов")
+        else:
+            print("  📊 Обычный режим: используем до 10000 отзывов")
         
         clustering.prepare_texts()
         

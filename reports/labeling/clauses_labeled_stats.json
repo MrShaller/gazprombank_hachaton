@@ -1,28 +1,33 @@
 {
-  "total_clauses": 100,
-  "clauses_with_topics": 53,
-  "clauses_with_sentiments": 53,
-  "clauses_with_full_context": 100,
-  "clauses_with_equal_counts": 100,
+  "total_clauses": 11578,
+  "clauses_with_topics": 6242,
+  "clauses_with_sentiments": 6242,
+  "clauses_with_full_context": 11578,
+  "clauses_with_equal_counts": 11578,
   "equal_counts_percentage": 100.0,
   "topic_distribution": {
-    "Автокредит": 14,
-    "Обслуживание": 14,
-    "Потребительский кредит": 10,
-    "Другое": 9,
-    "Мобильное приложение": 7,
-    "Дебетовая карта": 2,
-    "Дистанционное обслуживание": 1,
-    "Денежные переводы": 1
+    "Обслуживание": 1453,
+    "Дебетовая карта": 972,
+    "Денежные переводы": 639,
+    "Кредитная карта": 595,
+    "Потребительский кредит": 593,
+    "Вклады": 512,
+    "Ипотека": 505,
+    "Мобильное приложение": 451,
+    "Дистанционное обслуживание": 423,
+    "Рефинансирование кредитов": 313,
+    "Другое": 304,
+    "Автокредит": 212,
+    "Обмен валют": 43
   },
   "sentiment_distribution": {
-    "отрицательно": 33,
-    "нейтрально": 23,
-    "положительно": 2
+    "отрицательно": 4019,
+    "нейтрально": 2036,
+    "положительно": 960
   },
-  "avg_topics_per_clause": 0.58,
-  "avg_sentiments_per_clause": 0.58,
-  "execution_time_seconds": 1228.8709921836853,
-  "execution_time_minutes": 20.481183203061423,
-  "avg_time_per_clause": 12.288709921836853
+  "avg_topics_per_clause": 0.605890481948523,
+  "avg_sentiments_per_clause": 0.605890481948523,
+  "execution_time_seconds": 143603.53999090195,
+  "execution_time_minutes": 2393.392333181699,
+  "avg_time_per_clause": 12.403138710563304
 }

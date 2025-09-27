@@ -35,14 +35,20 @@ class EmbeddingClustering:
         self.model = None
         self.clusters = None
         
-    def load_data(self):
-        """Загрузка данных из JSON файла"""
+    def load_data(self, max_samples=40000):
+        """Загрузка данных из JSON файла с ограничением размера выборки"""
         print("Загружаем данные...")
         with open(self.data_path, 'r', encoding='utf-8') as f:
             self.data = json.load(f)
         
         # Преобразуем в DataFrame для удобства
         self.df = pd.DataFrame(self.data)
+        
+        # Ограничиваем размер выборки для избежания проблем с памятью
+        if len(self.df) > max_samples:
+            print(f"Данных слишком много ({len(self.df)}), берем случайную выборку из {max_samples} отзывов")
+            self.df = self.df.sample(n=max_samples, random_state=42).reset_index(drop=True)
+        
         print(f"Загружено {len(self.df)} отзывов")
         
     def preprocess_text(self, text):
@@ -77,18 +83,24 @@ class EmbeddingClustering:
             model_name (str): Название модели
         """
         print(f"Загружаем модель {model_name}...")
-        self.model = SentenceTransformer(model_name)
+        # Используем CPU для избежания проблем с Metal на macOS
+        self.model = SentenceTransformer(model_name, device='cpu')
         print("Модель загружена")
         
-    def create_embeddings(self):
-        """Создание эмбеддингов для текстов отзывов"""
+    def create_embeddings(self, batch_size=32):
+        """Создание эмбеддингов для текстов отзывов с батчевой обработкой"""
         print("Создаем эмбеддинги...")
         
         # Предобработка текстов
-        texts = [self.preprocess_text(review['review_text']) for review in self.data]
+        texts = [self.preprocess_text(str(review)) for review in self.df['review_text']]
         
-        # Создаем эмбеддинги
-        self.embeddings = self.model.encode(texts, show_progress_bar=True)
+        # Создаем эмбеддинги с небольшим размером батча
+        self.embeddings = self.model.encode(
+            texts, 
+            show_progress_bar=True, 
+            batch_size=batch_size,
+            convert_to_numpy=True
+        )
         print(f"Создано {len(self.embeddings)} эмбеддингов размерности {self.embeddings.shape[1]}")
         
     def find_optimal_clusters(self, max_clusters=20):
