@@ -11,12 +11,16 @@ interface TonalityPieChartProps {
   data: TonalityDistribution[];
   totalReviews: number;
   className?: string;
+  isFiltered?: boolean;
+  filterDescription?: string;
 }
 
 export default function TonalityPieChart({ 
   data, 
   totalReviews, 
-  className = '' 
+  className = '',
+  isFiltered = false,
+  filterDescription = ''
 }: TonalityPieChartProps) {
   // Подготовка данных для диаграммы
   const chartData = data.map(item => ({
@@ -80,7 +84,7 @@ export default function TonalityPieChart({
           Распределение тональностей
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Общая диаграмма и данные без фильтров
+          {isFiltered ? filterDescription : 'Общая диаграмма и данные без фильтров'}
         </p>
       </div>
 
@@ -114,7 +118,7 @@ export default function TonalityPieChart({
         <div className="w-full lg:w-1/3 lg:pl-6">
           <div className="text-center lg:text-left mb-6">
             <div className="text-3xl font-bold text-gazprom-blue mb-1">
-              {totalReviews.toLocaleString('ru-RU')}
+              {(totalReviews || 0).toLocaleString('ru-RU')}
             </div>
             <div className="text-sm text-gray-600">Всего отзывов</div>
           </div>

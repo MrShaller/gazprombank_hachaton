@@ -2,6 +2,124 @@
 @tailwind components;
 @tailwind utilities;
 
+/* React DatePicker кастомизация */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker {
+  font-family: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.react-datepicker__header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+.react-datepicker__current-month {
+  color: #111827;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.react-datepicker__day-name {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.react-datepicker__day {
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.react-datepicker__day:hover {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: #1e3a8a; /* Газпром синий */
+  color: white;
+}
+
+.react-datepicker__day--range-start,
+.react-datepicker__day--range-end {
+  background-color: #1e40af; /* Темнее для начала/конца */
+  color: white;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: #dbeafe;
+  color: #1e3a8a;
+}
+
+.react-datepicker__today-button {
+  background-color: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
+  color: #1e3a8a;
+  font-weight: 500;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.react-datepicker__today-button:hover {
+  background-color: #e5e7eb;
+}
+
+.react-datepicker__day--disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.react-datepicker__day--outside-month {
+  color: #d1d5db;
+}
+
+.react-datepicker__navigation {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.react-datepicker__navigation--previous {
+  left: 6px;
+}
+
+.react-datepicker__navigation--next {
+  right: 6px;
+}
+
+.react-datepicker__triangle {
+  display: none;
+}
+
+/* Кнопка очистки календаря */
+.react-datepicker__close-icon {
+  right: 24px !important; /* Сдвигаем влево от иконки календаря */
+  background-color: #6b7280;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+}
+
+.react-datepicker__close-icon::after {
+  background-color: white;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {

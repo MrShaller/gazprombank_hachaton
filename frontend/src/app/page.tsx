@@ -19,6 +19,7 @@ import {
   useProductsStats, 
   useTonalityDistribution, 
   useTonalityDynamics,
+  useSummaryStats,
   useApiHealth,
   useFilters 
 } from '@/hooks/useApi';
@@ -30,13 +31,13 @@ export default function Dashboard() {
   const { filters, updateFilter, resetFilters } = useFilters();
   
   // Состояние дат
-  const [dateRange, setDateRange] = useState(() => {
-    const { start, end } = getDefaultDateRange();
-    return { start, end };
+  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>(() => {
+    return { start: null, end: null };
   });
 
   // API данные
   const { data: productsStats, loading: productsLoading, error: productsError, refetch: refetchProducts } = useProductsStats();
+  const { data: summaryStats, loading: summaryLoading, refetch: refetchSummary } = useSummaryStats();
   
   const { data: tonalityDistribution, loading: tonalityLoading, refetch: refetchTonality } = useTonalityDistribution({
     product_id: filters.product_id,
@@ -63,9 +64,20 @@ export default function Dashboard() {
   };
 
   const handleDateRangeChange = (startDate?: Date, endDate?: Date) => {
+    console.log('handleDateRangeChange called with:', { startDate, endDate });
+    
     if (startDate && endDate) {
+      // Обе даты выбраны - устанавливаем диапазон
+      console.log('Setting date range:', { start: startDate, end: endDate });
       setDateRange({ start: startDate, end: endDate });
+    } else if (!startDate && !endDate) {
+      // Обе даты сброшены - очищаем диапазон
+      console.log('Clearing date range');
+      setDateRange({ start: null, end: null });
+    } else {
+      console.log('Partial date selection, waiting for second date');
     }
+    // Если выбрана только одна дата, ничего не делаем - ждем вторую
   };
 
   const handleIntervalChange = (interval: IntervalType) => {
@@ -74,12 +86,13 @@ export default function Dashboard() {
 
   const handleRefreshData = () => {
     refetchProducts();
+    refetchSummary();
     refetchTonality();
     refetchDynamics();
   };
 
   // Проверка загрузки
-  const isLoading = productsLoading || tonalityLoading || dynamicsLoading;
+  const isLoading = productsLoading || summaryLoading || tonalityLoading || dynamicsLoading;
 
   // Проверка ошибок
   const hasError = productsError || !isHealthy;
@@ -169,10 +182,18 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Круговая диаграмма тональностей */}
           <div className="lg:col-span-1">
-            {tonalityDistribution ? (
+            {tonalityDistribution && tonalityDistribution.distribution && tonalityDistribution.total_reviews !== undefined ? (
               <TonalityPieChart
                 data={tonalityDistribution.distribution}
                 totalReviews={tonalityDistribution.total_reviews}
+                isFiltered={filters.product_id !== undefined || dateRange.start !== null || dateRange.end !== null}
+                filterDescription={
+                  filters.product_id 
+                    ? `Данные для продукта: ${productsStats?.products.find(p => p.id === filters.product_id)?.name || 'Неизвестно'}`
+                    : (dateRange.start || dateRange.end)
+                      ? 'Данные за выбранный период'
+                      : 'Общая диаграмма и данные без фильтров'
+                }
               />
             ) : (
               <div className="bg-white rounded-lg p-6 h-96 flex items-center justify-center">

@@ -51,7 +51,7 @@ export function useProductsStats() {
 }
 
 /**
- * Хук для получения общей сводной статистики
+ * Хук для получения общей сводной статистики (без фильтров)
  */
 export function useSummaryStats() {
   return useApiCall<SummaryStats>(() => api.analytics.getSummary());

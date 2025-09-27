@@ -7,14 +7,16 @@ import { useState } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import type { ProductStats, IntervalType } from '@/types/api';
 
 interface FilterPanelProps {
   products: ProductStats[];
   selectedProductId?: number;
   selectedTonality?: string;
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: Date | null;
+  endDate?: Date | null;
   interval?: IntervalType;
   onProductChange?: (productId?: number) => void;
   onTonalityChange?: (tonality?: string) => void;
@@ -38,6 +40,43 @@ export default function FilterPanel({
 }: FilterPanelProps) {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const [isTonalityDropdownOpen, setIsTonalityDropdownOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  // Локальное состояние для отслеживания выбора дат
+  const [tempStartDate, setTempStartDate] = useState<Date | null>(startDate || null);
+  const [tempEndDate, setTempEndDate] = useState<Date | null>(endDate || null);
+
+  // Быстрые диапазоны дат (на основе реальных данных в БД)
+  const quickDateRanges = [
+    {
+      label: 'Май 2025',
+      getRange: () => ({
+        start: new Date(2025, 4, 1), // май (месяц 4 = май)
+        end: new Date(2025, 4, 31)   // 31 мая
+      })
+    },
+    {
+      label: 'Последние 3 месяца',
+      getRange: () => ({
+        start: new Date(2025, 2, 1), // март (месяц 2 = март)
+        end: new Date(2025, 4, 31)   // май (месяц 4 = май)
+      })
+    },
+    {
+      label: '2024 год',
+      getRange: () => ({
+        start: new Date(2024, 0, 1),  // 1 января
+        end: new Date(2024, 11, 31)   // 31 декабря
+      })
+    },
+    {
+      label: '2025 год',
+      getRange: () => ({
+        start: new Date(2025, 0, 1),  // 1 января
+        end: new Date(2025, 4, 31)    // 31 мая (до мая включительно)
+      })
+    }
+  ];
 
   // Опции тональности
   const tonalityOptions = [
@@ -111,17 +150,113 @@ export default function FilterPanel({
             Период
           </label>
           <div className="relative">
-            <input
-              type="text"
-              value={formatDateRange()}
-              readOnly
-              className="w-full px-4 py-2 pr-10 bg-white border border-gray-300 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-gazprom-blue"
-              onClick={() => {
-                // Здесь можно добавить date picker
-                console.log('Open date picker');
+            <DatePicker
+              selected={tempStartDate}
+              onChange={(dates) => {
+                console.log('🗓️ DatePicker onChange triggered!');
+                console.log('  Raw dates:', dates);
+                console.log('  Type:', typeof dates);
+                console.log('  Is array:', Array.isArray(dates));
+                
+                if (Array.isArray(dates)) {
+                  const [start, end] = dates as [Date | null, Date | null];
+                  console.log('  📅 Array format detected:');
+                  console.log('    Start date:', start ? start.toLocaleDateString('ru-RU') : 'null');
+                  console.log('    End date:', end ? end.toLocaleDateString('ru-RU') : 'null');
+                  
+                  // Обновляем локальное состояние
+                  setTempStartDate(start);
+                  setTempEndDate(end);
+                  
+                  if (start && end) {
+                    // Если выбраны обе даты, вызываем callback
+                    console.log('  ✅ Both dates selected! Calling onDateRangeChange...');
+                    onDateRangeChange?.(start, end);
+                  } else if (!start && !end) {
+                    // Если обе даты сброшены (через clear), сбрасываем фильтр
+                    console.log('  🗑️ Clearing date range');
+                    onDateRangeChange?.(undefined, undefined);
+                  } else if (start && !end) {
+                    // Выбрана только начальная дата - это нормально для диапазона
+                    console.log('  ⏳ Start date selected, waiting for end date...');
+                    // НЕ вызываем callback, просто ждем вторую дату
+                  } else if (!start && end) {
+                    console.log('  ⚠️ Only end date selected (unusual case)');
+                  }
+                } else {
+                  // Если передана одна дата (не массив)
+                  const singleDate = dates as Date | null;
+                  console.log('  📅 Single date format:', singleDate ? singleDate.toLocaleDateString('ru-RU') : 'null');
+                  if (!singleDate) {
+                    console.log('  🗑️ Single date cleared');
+                    onDateRangeChange?.(undefined, undefined);
+                  }
+                }
+              }}
+              startDate={tempStartDate}
+              endDate={tempEndDate}
+              selectsRange
+              dateFormat="dd.MM.yyyy"
+              placeholderText="XX.XX.XXXX — XX.XX.XXXX"
+              locale={ru}
+              className="w-full px-4 py-2 pr-8 bg-white border border-gray-300 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-gazprom-blue"
+              calendarClassName="border border-gray-300 rounded-lg shadow-lg"
+              popperClassName="z-50"
+              showPopperArrow={false}
+              maxDate={new Date()}
+              monthsShown={1}
+              showYearDropdown
+              showMonthDropdown
+              dropdownMode="select"
+              todayButton="Сегодня"
+              shouldCloseOnSelect={false}
+              disabledKeyboardNavigation={false}
+              onSelect={(date: Date | null) => {
+                console.log('🖱️ Date clicked/selected:', date ? date.toLocaleDateString('ru-RU') : 'null');
+              }}
+              onCalendarOpen={() => {
+                console.log('📅 Calendar opened');
+              }}
+              onCalendarClose={() => {
+                console.log('📅 Calendar closed');
               }}
             />
-            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Calendar className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+          
+          {/* Быстрые кнопки выбора периода */}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {quickDateRanges.map((range, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  const { start, end } = range.getRange();
+                  console.log('🚀 Quick button clicked:', range.label);
+                  console.log('  Setting dates:', start.toLocaleDateString('ru-RU'), '-', end.toLocaleDateString('ru-RU'));
+                  
+                  // Обновляем локальное состояние
+                  setTempStartDate(start);
+                  setTempEndDate(end);
+                  
+                  // Вызываем callback
+                  onDateRangeChange?.(start, end);
+                }}
+                className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gazprom-blue"
+              >
+                {range.label}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                console.log('🗑️ Reset dates button clicked');
+                setTempStartDate(null);
+                setTempEndDate(null);
+                onDateRangeChange?.(undefined, undefined);
+              }}
+              className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 focus:outline-none"
+            >
+              Сбросить
+            </button>
           </div>
         </div>
 

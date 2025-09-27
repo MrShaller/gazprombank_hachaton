@@ -115,6 +115,29 @@ class ReviewETL:
             logger.warning(f"Не удалось распарсить время парсинга: {parsed_at_str}")
             return datetime.now()
     
+    def parse_review_date(self, date_str: str) -> datetime:
+        """
+        Парсинг даты отзыва из формата 'dd.mm.yyyy hh:mm'
+        """
+        try:
+            return datetime.strptime(date_str, '%d.%m.%Y %H:%M')
+        except ValueError:
+            logger.error(f"Не удалось распарсить дату отзыва: {date_str}")
+            raise
+    
+    def parse_parsed_at(self, date_str: str) -> datetime:
+        """
+        Парсинг даты парсинга из ISO формата
+        """
+        try:
+            # Удаляем микросекунды, если они есть
+            if '.' in date_str:
+                date_str = date_str.split('.')[0]
+            return datetime.fromisoformat(date_str.replace('T', ' '))
+        except ValueError:
+            logger.error(f"Не удалось распарсить дату парсинга: {date_str}")
+            raise
+
     def validate_review_data(self, review_data: Dict) -> bool:
         """
         Валидация данных отзыва
@@ -132,21 +155,31 @@ class ReviewETL:
         
         # Проверка обязательных полей
         for field in required_fields:
-            if field not in review_data or not review_data[field]:
-                logger.warning(f"Отсутствует обязательное поле: {field}")
+            if field not in review_data:
+                logger.warning(f"Отсутствует обязательное поле: {field} для отзыва {review_data.get('review_id', 'unknown')}")
+                return False
+            
+            # Специальная проверка для review_text - не должен быть пустым
+            if field == 'review_text' and (not review_data[field] or str(review_data[field]).strip() == ''):
+                logger.warning(f"Пустое поле review_text для отзыва {review_data.get('review_id', 'unknown')}")
+                return False
+            
+            # Обычная проверка для других полей
+            if field != 'review_text' and not review_data[field]:
+                logger.warning(f"Отсутствует обязательное поле: {field} для отзыва {review_data.get('review_id', 'unknown')}")
                 return False
         
         # Проверка рейтинга
         rating = review_data.get('rating')
         if not isinstance(rating, int) or rating < 1 or rating > 5:
-            logger.warning(f"Некорректный рейтинг: {rating}")
+            logger.warning(f"Некорректный рейтинг: {rating} для отзыва {review_data.get('review_id', 'unknown')}")
             return False
         
         # Проверка тональности
         tonality = review_data.get('tonality')
         allowed_tonalities = ['положительно', 'отрицательно', 'нейтрально']
         if tonality not in allowed_tonalities:
-            logger.warning(f"Некорректная тональность: {tonality}")
+            logger.warning(f"Некорректная тональность: {tonality} для отзыва {review_data.get('review_id', 'unknown')}")
             return False
         
         return True
@@ -187,26 +220,34 @@ class ReviewETL:
                         self.stats['reviews_skipped'] += 1
                         continue
                     
-                    # Проверка на дубликат по review_id
+                    # Получение или создание продукта
+                    product = self.get_or_create_product(session, review_data['product_type'])
+                    
+                    # Парсинг дат
+                    review_date = self.parse_review_date(review_data['review_date'])
+                    parsed_at = self.parse_parsed_at(review_data['parsed_at'])
+                    
+                    # Создаем уникальный ID для отзыва, включающий тип продукта
+                    unique_review_id = f"{review_data['product_type']}_{review_data['review_id']}"
+                    
+                    # Проверка на дубликат по уникальному review_id
                     existing_review = session.query(Review).filter(
-                        Review.review_id == review_data['review_id']
+                        Review.review_id == unique_review_id
                     ).first()
                     
                     if existing_review:
                         self.stats['reviews_skipped'] += 1
+                        logger.debug(f"Пропущен дубликат отзыва {unique_review_id}")
                         continue
-                    
-                    # Получение или создание продукта
-                    product = self.get_or_create_product(session, review_data['product_type'])
                     
                     # Создание отзыва
                     review = Review(
-                        review_id=review_data['review_id'],
+                        review_id=unique_review_id,
                         product_id=product.id,
                         review_text=review_data['review_text'],
-                        review_date=self.parse_review_date(review_data['review_date']),
+                        review_date=review_date,
                         url=review_data.get('url'),
-                        parsed_at=self.parse_parsed_at(review_data['parsed_at']),
+                        parsed_at=parsed_at,
                         bank_name=review_data['bank_name'],
                         rating=review_data['rating'],
                         tonality=review_data['tonality'],

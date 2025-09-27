@@ -57,7 +57,13 @@ def get_tonality_distribution(
     if not distribution:
         return {
             "distribution": [],
-            "message": "Нет данных для указанных фильтров"
+            "total_reviews": 0,
+            "message": "Нет данных для указанных фильтров",
+            "filters": {
+                "product_id": product_id,
+                "start_date": start_date,
+                "end_date": end_date
+            }
         }
     
     total_reviews = sum(item['count'] for item in distribution)
