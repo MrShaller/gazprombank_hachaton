@@ -39,6 +39,13 @@ export default function FilterPanel({
   // Быстрые диапазоны дат (на основе реальных данных в БД)
   const quickDateRanges = [
     {
+      label: 'Сегодня',
+      getRange: () => ({
+        start: new Date(2025, 4, 31), // 31 мая 2025 (последний день с данными)
+        end: new Date(2025, 4, 31)    // 31 мая 2025
+      })
+    },
+    {
       label: 'Май 2025',
       getRange: () => ({
         start: new Date(2025, 4, 1), // май (месяц 4 = май)
@@ -176,12 +183,12 @@ export default function FilterPanel({
               calendarClassName="border border-gray-300 rounded-lg shadow-lg"
               popperClassName="z-50"
               showPopperArrow={false}
-              maxDate={new Date()}
+              maxDate={new Date(2025, 4, 31)} // 31 мая 2025
               monthsShown={1}
               showYearDropdown
               showMonthDropdown
               dropdownMode="select"
-              todayButton="Сегодня"
+              openToDate={new Date(2025, 4, 31)} // Открывается на мае 2025 (31 мая)
               shouldCloseOnSelect={false}
               disabledKeyboardNavigation={false}
               onSelect={(date: Date | null) => {
@@ -221,14 +228,14 @@ export default function FilterPanel({
             ))}
             <button
               onClick={() => {
-                console.log('🗑️ Reset dates button clicked');
+                console.log('📅 All time button clicked');
                 setTempStartDate(null);
                 setTempEndDate(null);
                 onDateRangeChange?.(undefined, undefined);
               }}
-              className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 focus:outline-none"
+              className="px-2 py-1 text-xs bg-gazprom-blue text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-gazprom-blue"
             >
-              Сбросить
+              За всё время
             </button>
           </div>
         </div>
