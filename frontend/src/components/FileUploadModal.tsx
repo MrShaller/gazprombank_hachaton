@@ -140,7 +140,7 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
       onClick={handleClose}
     >
       <div 
-        className="bg-white rounded-lg w-full max-w-lg mx-4 p-6 relative"
+        className="bg-white rounded-lg w-full max-w-2xl mx-4 p-6 relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Заголовок */}
@@ -164,10 +164,12 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
               <p className="font-medium mb-2">
                 Формат входных запросов в файле должен быть представлен в данном виде:
               </p>
-              <pre className="bg-blue-100 p-3 rounded text-xs overflow-x-auto">
+              <pre className="bg-blue-100 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap break-words">
 {`{
   "data": [
-    {"id": 1, "text": "Очень понравилось обслуживание в отделении, но мобильное приложение часто зависает."}]
+    {"id": 1, "text": "Очень понравилось обслуживание в отделении, но мобильное приложение часто зависает."},
+    {"id": 2, "text": "Кредитную карту одобрили быстро, но лимит слишком маленький."}
+  ]
 }`}
               </pre>
             </div>
