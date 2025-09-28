@@ -39,13 +39,6 @@ export default function FilterPanel({
   // Быстрые диапазоны дат (на основе реальных данных в БД)
   const quickDateRanges = [
     {
-      label: 'Сегодня',
-      getRange: () => ({
-        start: new Date(2025, 4, 29), // 29 мая 2025 (последний день с данными)
-        end: new Date(2025, 4, 29)    // 29 мая 2025
-      })
-    },
-    {
       label: 'Май 2025',
       getRange: () => ({
         start: new Date(2025, 4, 1), // май (месяц 4 = май)
@@ -196,12 +189,12 @@ export default function FilterPanel({
               calendarClassName="border border-gray-300 rounded-lg shadow-lg"
               popperClassName="z-50"
               showPopperArrow={false}
-              maxDate={new Date(2025, 4, 29)} // 29 мая 2025
+              maxDate={new Date(2025, 4, 27)} // 27 мая 2025
               monthsShown={1}
               showYearDropdown
               showMonthDropdown
               dropdownMode="select"
-              openToDate={new Date(2025, 4, 29)} // Открывается на мае 2025 (29 мая)
+              openToDate={new Date(2025, 4, 27)} // Открывается на мае 2025 (27 мая)
               shouldCloseOnSelect={false}
               disabledKeyboardNavigation={false}
               onSelect={(date: Date | null) => {
