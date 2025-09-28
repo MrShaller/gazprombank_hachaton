@@ -43,6 +43,13 @@ export default function ProductsBarChart({
     }
   };
 
+  // Функция для получения процента по выбранной тональности
+  const getTonalityPercentage = (product: ProductStats, tonality: string) => {
+    if (product.total_reviews === 0) return 0;
+    const value = getTonalityValue(product, tonality);
+    return tonality === 'all' ? 100 : (value / product.total_reviews) * 100;
+  };
+
   // Подготовка данных для диаграммы
   const chartData = products
     .filter(product => product.total_reviews > 0)
@@ -51,12 +58,14 @@ export default function ProductsBarChart({
     .map(product => ({
       name: truncateText(product.name, 15),
       fullName: product.name,
-      value: getTonalityValue(product, selectedTonality),
+      value: selectedTonality === 'all' ? getTonalityValue(product, selectedTonality) : getTonalityPercentage(product, selectedTonality),
+      absoluteValue: getTonalityValue(product, selectedTonality),
       total: product.total_reviews,
       positive: product.positive_reviews,
       negative: product.negative_reviews,
       neutral: product.neutral_reviews,
       avgRating: product.avg_rating,
+      percentage: getTonalityPercentage(product, selectedTonality),
     }));
 
   // Кастомный tooltip
@@ -73,7 +82,12 @@ export default function ProductsBarChart({
               <span className="text-sm text-gray-600">
                 {selectedTonality === 'all' ? 'Всего отзывов:' : `${currentTonalityOption.label}:`}
               </span>
-              <span className="text-sm font-medium">{formatNumber(data.value)}</span>
+              <span className="text-sm font-medium">
+                {selectedTonality === 'all' 
+                  ? formatNumber(data.absoluteValue)
+                  : `${data.percentage.toFixed(1)}% (${formatNumber(data.absoluteValue)})`
+                }
+              </span>
             </div>
             
             {selectedTonality !== 'all' && (
@@ -145,10 +159,13 @@ export default function ProductsBarChart({
           
           <div className="text-right">
             <div className="text-2xl font-bold text-gazprom-blue">
-              {chartData.reduce((sum, p) => sum + p.value, 0).toLocaleString('ru-RU')}
+              {selectedTonality === 'all' 
+                ? chartData.reduce((sum, p) => sum + p.absoluteValue, 0).toLocaleString('ru-RU')
+                : `${(chartData.reduce((sum, p) => sum + p.percentage, 0) / chartData.length).toFixed(1)}%`
+              }
             </div>
             <div className="text-sm text-gray-600">
-              {selectedTonality === 'all' ? 'Всего отзывов' : currentTonalityOption.label}
+              {selectedTonality === 'all' ? 'Всего отзывов' : `Средний % ${currentTonalityOption.label.toLowerCase()}`}
             </div>
           </div>
         </div>
@@ -214,7 +231,8 @@ export default function ProductsBarChart({
             <YAxis 
               tick={{ fontSize: 12 }}
               stroke="#6b7280"
-              tickFormatter={(value) => formatNumber(value)}
+              domain={selectedTonality === 'all' ? [0, 'dataMax'] : [0, 100]}
+              tickFormatter={(value) => selectedTonality === 'all' ? formatNumber(value) : `${value}%`}
             />
             <Tooltip content={<CustomTooltip />} />
             
@@ -247,16 +265,6 @@ export default function ProductsBarChart({
         </div>
       )}
 
-      {/* Легенда */}
-      <div className="mt-4 flex justify-center">
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <div 
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: currentTonalityOption.color }}
-          />
-          <span>{currentTonalityOption.label}</span>
-        </div>
-      </div>
     </div>
   );
 }
