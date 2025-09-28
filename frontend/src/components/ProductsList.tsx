@@ -10,7 +10,9 @@ import type { ProductStats } from '@/types/api';
 interface ProductsListProps {
   products: ProductStats[];
   onProductSelect?: (productId: number) => void;
+  onProductsSelect?: (productIds: number[]) => void;
   selectedProductId?: number;
+  selectedProductIds?: number[];
   className?: string;
   showAll?: boolean;
   maxItems?: number;
@@ -19,7 +21,9 @@ interface ProductsListProps {
 export default function ProductsList({
   products,
   onProductSelect,
+  onProductsSelect,
   selectedProductId,
+  selectedProductIds = [],
   className = '',
   showAll = false,
   maxItems = 10,
@@ -29,11 +33,25 @@ export default function ProductsList({
     .filter(product => product.total_reviews > 0)
     .sort((a, b) => b.total_reviews - a.total_reviews);
 
+  // Функция для переключения выбора продукта
+  const toggleProduct = (productId: number) => {
+    if (onProductsSelect) {
+      const newSelectedIds = selectedProductIds.includes(productId)
+        ? selectedProductIds.filter(id => id !== productId) // Убираем если уже выбран
+        : [...selectedProductIds, productId]; // Добавляем если не выбран
+      
+      onProductsSelect(newSelectedIds);
+    } else if (onProductSelect) {
+      // Обратная совместимость с одиночным выбором
+      onProductSelect(productId);
+    }
+  };
+
   // Ограничиваем количество отображаемых продуктов
   const displayProducts = showAll ? filteredProducts : filteredProducts.slice(0, maxItems);
 
   const ProductBar = ({ product }: { product: ProductStats }) => {
-    const isSelected = selectedProductId === product.id;
+    const isSelected = selectedProductIds.includes(product.id) || selectedProductId === product.id;
     
     return (
       <div
@@ -41,7 +59,7 @@ export default function ProductsList({
           group relative bg-gazprom-blue rounded-lg p-4 cursor-pointer transition-all duration-200
           ${isSelected ? 'ring-2 ring-gazprom-blue-light shadow-lg' : 'hover:shadow-md hover:bg-gazprom-blue-dark'}
         `}
-        onClick={() => onProductSelect?.(product.id)}
+        onClick={() => toggleProduct(product.id)}
       >
         {/* Заголовок продукта */}
         <div className="flex items-center justify-between mb-3">

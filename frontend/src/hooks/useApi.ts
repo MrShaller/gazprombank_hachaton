@@ -135,7 +135,8 @@ export function useApiHealth() {
  */
 export function useFilters() {
   const [filters, setFilters] = useState({
-    product_id: undefined as number | undefined,
+    product_id: undefined as number | undefined, // Оставляем для обратной совместимости
+    product_ids: [] as number[], // Новое поле для множественного выбора
     start_date: undefined as string | undefined,
     end_date: undefined as string | undefined,
     tonality: undefined as string | undefined,
@@ -149,6 +150,7 @@ export function useFilters() {
   const resetFilters = useCallback(() => {
     setFilters({
       product_id: undefined,
+      product_ids: [],
       start_date: undefined,
       end_date: undefined,
       tonality: undefined,

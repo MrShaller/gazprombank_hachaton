@@ -59,6 +59,12 @@ export default function Dashboard() {
     updateFilter('product_id', productId);
   };
 
+  const handleProductsChange = (productIds: number[]) => {
+    updateFilter('product_ids', productIds);
+    // Также обновляем старое поле для обратной совместимости
+    updateFilter('product_id', productIds.length === 1 ? productIds[0] : undefined);
+  };
+
   const handleTonalityChange = (tonality?: string) => {
     updateFilter('tonality', tonality);
   };
@@ -166,10 +172,10 @@ export default function Dashboard() {
         {/* Панель фильтров */}
         <FilterPanel
           products={productsStats?.products || []}
-          selectedProductId={filters.product_id}
+          selectedProductIds={filters.product_ids || []}
           startDate={dateRange.start}
           endDate={dateRange.end}
-          onProductChange={handleProductChange}
+          onProductsChange={handleProductsChange}
           onDateRangeChange={handleDateRangeChange}
           className="mb-8"
         />
@@ -204,7 +210,9 @@ export default function Dashboard() {
               <ProductsList
                 products={productsStats.products}
                 onProductSelect={handleProductChange}
+                onProductsSelect={handleProductsChange}
                 selectedProductId={filters.product_id}
+                selectedProductIds={filters.product_ids}
                 maxItems={8}
               />
             ) : (

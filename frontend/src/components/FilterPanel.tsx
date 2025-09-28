@@ -13,20 +13,20 @@ import type { ProductStats, IntervalType } from '@/types/api';
 
 interface FilterPanelProps {
   products: ProductStats[];
-  selectedProductId?: number;
+  selectedProductIds?: number[];
   startDate?: Date | null;
   endDate?: Date | null;
-  onProductChange?: (productId?: number) => void;
+  onProductsChange?: (productIds: number[]) => void;
   onDateRangeChange?: (startDate?: Date, endDate?: Date) => void;
   className?: string;
 }
 
 export default function FilterPanel({
   products,
-  selectedProductId,
+  selectedProductIds = [],
   startDate,
   endDate,
-  onProductChange,
+  onProductsChange,
   onDateRangeChange,
   className = '',
 }: FilterPanelProps) {
@@ -41,8 +41,8 @@ export default function FilterPanel({
     {
       label: 'Сегодня',
       getRange: () => ({
-        start: new Date(2025, 4, 31), // 31 мая 2025 (последний день с данными)
-        end: new Date(2025, 4, 31)    // 31 мая 2025
+        start: new Date(2025, 4, 29), // 29 мая 2025 (последний день с данными)
+        end: new Date(2025, 4, 29)    // 29 мая 2025
       })
     },
     {
@@ -77,9 +77,22 @@ export default function FilterPanel({
 
 
 
-  // Получаем название выбранного продукта
-  const selectedProduct = products.find(p => p.id === selectedProductId);
-  const selectedProductName = selectedProduct ? selectedProduct.name : 'Все';
+  // Получаем названия выбранных продуктов
+  const selectedProducts = products.filter(p => selectedProductIds.includes(p.id));
+  const selectedProductsText = selectedProducts.length === 0 
+    ? 'Все' 
+    : selectedProducts.length === 1 
+    ? selectedProducts[0].name
+    : `Выбрано: ${selectedProducts.length}`;
+
+  // Функция для переключения выбора продукта
+  const toggleProduct = (productId: number) => {
+    const newSelectedIds = selectedProductIds.includes(productId)
+      ? selectedProductIds.filter(id => id !== productId) // Убираем если уже выбран
+      : [...selectedProductIds, productId]; // Добавляем если не выбран
+    
+    onProductsChange?.(newSelectedIds);
+  };
 
   // Форматирование диапазона дат
   const formatDateRange = () => {
@@ -183,12 +196,12 @@ export default function FilterPanel({
               calendarClassName="border border-gray-300 rounded-lg shadow-lg"
               popperClassName="z-50"
               showPopperArrow={false}
-              maxDate={new Date(2025, 4, 31)} // 31 мая 2025
+              maxDate={new Date(2025, 4, 29)} // 29 мая 2025
               monthsShown={1}
               showYearDropdown
               showMonthDropdown
               dropdownMode="select"
-              openToDate={new Date(2025, 4, 31)} // Открывается на мае 2025 (31 мая)
+              openToDate={new Date(2025, 4, 29)} // Открывается на мае 2025 (29 мая)
               shouldCloseOnSelect={false}
               disabledKeyboardNavigation={false}
               onSelect={(date: Date | null) => {
@@ -249,16 +262,21 @@ export default function FilterPanel({
           <Dropdown
             isOpen={isProductDropdownOpen}
             onToggle={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
-            trigger={<span className="truncate">{selectedProductName}</span>}
+            trigger={<span className="truncate">{selectedProductsText}</span>}
           >
             <button
               onClick={() => {
-                onProductChange?.(undefined);
+                onProductsChange?.([]);
                 setIsProductDropdownOpen(false);
               }}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-b border-gray-200"
             >
-              Все
+              <div className="flex items-center justify-between">
+                <span>Все продукты</span>
+                {selectedProductIds.length === 0 && (
+                  <span className="text-gazprom-blue">✓</span>
+                )}
+              </div>
             </button>
             {products
               .filter(p => p.total_reviews > 0)
@@ -267,13 +285,20 @@ export default function FilterPanel({
                 <button
                   key={product.id}
                   onClick={() => {
-                    onProductChange?.(product.id);
-                    setIsProductDropdownOpen(false);
+                    toggleProduct(product.id);
+                    // НЕ закрываем dropdown для множественного выбора
                   }}
                   className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100 truncate"
                   title={product.name}
                 >
-                  {product.name}
+                  <div className="flex items-center justify-between">
+                    <span className={selectedProductIds.includes(product.id) ? 'font-medium text-gazprom-blue' : ''}>
+                      {product.name}
+                    </span>
+                    {selectedProductIds.includes(product.id) && (
+                      <span className="text-gazprom-blue">✓</span>
+                    )}
+                  </div>
                 </button>
               ))}
           </Dropdown>
@@ -286,7 +311,7 @@ export default function FilterPanel({
       <div className="flex justify-between items-center mt-4">
         <button
           onClick={() => {
-            onProductChange?.(undefined);
+            onProductsChange?.([]);
             onDateRangeChange?.(undefined, undefined);
           }}
           className="text-sm text-gray-600 hover:text-gray-900"
