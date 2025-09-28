@@ -4,7 +4,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, ChevronDown, Upload } from 'lucide-react';
+import { Calendar, ChevronDown, Upload, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
@@ -314,13 +314,27 @@ export default function FilterPanel({
           Сбросить фильтры
         </button>
 
-        <button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-gazprom-blue text-white text-sm rounded-lg hover:bg-gazprom-blue-dark transition-colors"
-        >
-          <Upload className="w-4 h-4" />
-          <span>Загрузить данные для проверки</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-gazprom-blue text-white text-sm rounded-lg hover:bg-gazprom-blue-dark transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Загрузить данные для проверки</span>
+          </button>
+          
+          {/* Информационный значок */}
+          <div className="relative group">
+            <Info className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+            
+            {/* Tooltip */}
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+              Загрузка gold датасета для классификации продуктов и тональностей
+              {/* Стрелочка */}
+              <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Модальное окно загрузки файлов */}
