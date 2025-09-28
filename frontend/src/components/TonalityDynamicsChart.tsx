@@ -3,9 +3,9 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ChevronDown, Maximize2 } from 'lucide-react';
+import { ChevronDown, Maximize2, X } from 'lucide-react';
 import { formatChartDate, getTonalityColor, getTonalityLabel } from '@/lib/utils';
 import type { DynamicsPoint, IntervalType } from '@/types/api';
 
@@ -34,6 +34,27 @@ export default function TonalityDynamicsChart({
   ];
 
   const currentIntervalOption = intervalOptions.find(opt => opt.value === interval) || intervalOptions[2];
+
+  // Обработка клавиши Escape для закрытия модального окна
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener('keydown', handleEscape);
+      // Блокируем скролл страницы при открытом модальном окне
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isExpanded]);
+
   // Подготовка данных для графика
   const chartData = data.map(point => ({
     date: formatChartDate(point.date, interval),
@@ -280,6 +301,115 @@ export default function TonalityDynamicsChart({
         <div className="text-center py-8">
           <div className="text-gray-500 text-sm">
             Нет данных для отображения динамики
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно для развернутой диаграммы */}
+      {isExpanded && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setIsExpanded(false)}
+        >
+          <div 
+            className="bg-white rounded-lg w-11/12 h-5/6 max-w-7xl p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Заголовок модального окна */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Динамика изменения тональностей
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  Полноэкранный режим
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                {/* Переключатель режима в модальном окне */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setShowPercentage(true)}
+                    className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                      showPercentage 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Проценты
+                  </button>
+                  <button
+                    onClick={() => setShowPercentage(false)}
+                    className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                      !showPercentage 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Количество
+                  </button>
+                </div>
+                
+                {/* Кнопка закрытия */}
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            {/* Развернутый график */}
+            <div className="h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 14 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 14 }}
+                    stroke="#6b7280"
+                    domain={showPercentage ? [0, 100] : undefined}
+                    tickFormatter={(value) => showPercentage ? `${value}%` : value.toString()}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend content={<CustomLegend />} />
+                  
+                  <Line
+                    type="monotone"
+                    dataKey="positive"
+                    stroke={getTonalityColor('положительно')}
+                    strokeWidth={4}
+                    dot={{ fill: getTonalityColor('положительно'), strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 8, stroke: getTonalityColor('положительно'), strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="neutral"
+                    stroke={getTonalityColor('нейтрально')}
+                    strokeWidth={4}
+                    dot={{ fill: getTonalityColor('нейтрально'), strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 8, stroke: getTonalityColor('нейтрально'), strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="negative"
+                    stroke={getTonalityColor('отрицательно')}
+                    strokeWidth={4}
+                    dot={{ fill: getTonalityColor('отрицательно'), strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 8, stroke: getTonalityColor('отрицательно'), strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}
