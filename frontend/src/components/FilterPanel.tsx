@@ -4,11 +4,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, ChevronDown } from 'lucide-react';
+import { Calendar, ChevronDown, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import FileUploadModal from './FileUploadModal';
 import type { ProductStats, IntervalType } from '@/types/api';
 
 interface FilterPanelProps {
@@ -31,6 +32,7 @@ export default function FilterPanel({
   className = '',
 }: FilterPanelProps) {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   
   // Локальное состояние для отслеживания выбора дат
   const [tempStartDate, setTempStartDate] = useState<Date | null>(startDate || null);
@@ -312,7 +314,20 @@ export default function FilterPanel({
           Сбросить фильтры
         </button>
 
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-gazprom-blue text-white text-sm rounded-lg hover:bg-gazprom-blue-dark transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          <span>Загрузить данные для проверки</span>
+        </button>
       </div>
+
+      {/* Модальное окно загрузки файлов */}
+      <FileUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import traceback
 
 from .config import settings
 from .database import create_tables
-from .routers import products, reviews, analytics
+from .routers import products, reviews, analytics, predict
 
 # Настройка логирования
 logging.basicConfig(
@@ -61,6 +61,7 @@ app.add_middleware(
 app.include_router(products.router, prefix="/api/v1")
 app.include_router(reviews.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(predict.router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)
