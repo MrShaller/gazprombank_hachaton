@@ -2,7 +2,7 @@
 Pydantic схемы для валидации и сериализации данных
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field, validator
 
 
@@ -112,3 +112,30 @@ class AnalyticsQuery(BaseModel):
             if v not in allowed_values:
                 raise ValueError(f'Тональность должна быть одной из: {allowed_values}')
         return v
+
+
+# Схемы для обработки загрузки файлов
+
+class FileUploadItem(BaseModel):
+    """Элемент данных в загружаемом файле"""
+    id: Union[int, str] = Field(..., description="Уникальный идентификатор записи")
+    text: str = Field(..., min_length=1, description="Текст для анализа")
+
+class FileUploadData(BaseModel):
+    """Структура данных загружаемого файла"""
+    data: List[FileUploadItem] = Field(..., min_items=1, description="Массив данных для обработки")
+
+class PredictResponse(BaseModel):
+    """Ответ сервиса предсказаний"""
+    success: bool = Field(..., description="Статус выполнения операции")
+    message: str = Field(..., description="Сообщение о результате операции")
+    data: Optional[List[Dict[str, Any]]] = Field(None, description="Обработанные данные")
+    total_items: Optional[int] = Field(None, description="Количество обработанных элементов")
+    errors: Optional[List[str]] = Field(None, description="Список ошибок валидации")
+
+class ErrorResponse(BaseModel):
+    """Ответ с ошибкой"""
+    success: bool = Field(False, description="Статус выполнения операции")
+    message: str = Field(..., description="Сообщение об ошибке")
+    error_code: Optional[str] = Field(None, description="Код ошибки")
+    details: Optional[Dict[str, Any]] = Field(None, description="Дополнительные детали ошибки")
