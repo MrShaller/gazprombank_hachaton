@@ -143,7 +143,7 @@ export default function FilterPanel({
 
   return (
     <div className={`bg-gray-50 p-6 rounded-lg ${className}`}>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {/* Период */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -341,16 +341,6 @@ export default function FilterPanel({
           </select>
         </div>
 
-        {/* Возможность выбрать все */}
-        <div className="flex items-end">
-          <div className="bg-white rounded-lg border border-gray-300 p-2 text-center min-w-[120px]">
-            <div className="text-xs text-gray-600 mb-1">Все категории.</div>
-            <div className="text-xs text-gray-600 mb-1">Видим кол-во</div>
-            <div className="text-xs text-gray-600 mb-1">отзывов и</div>
-            <div className="text-xs text-gray-600">соотношение</div>
-            <div className="text-xs text-gray-600">тональностей</div>
-          </div>
-        </div>
       </div>
 
       {/* Кнопки действий */}
@@ -367,9 +357,6 @@ export default function FilterPanel({
           Сбросить фильтры
         </button>
 
-        <div className="text-sm text-gray-600">
-          Возможность выбрать всё
-        </div>
       </div>
     </div>
   );
