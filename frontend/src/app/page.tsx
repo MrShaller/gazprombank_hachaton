@@ -169,10 +169,8 @@ export default function Dashboard() {
           selectedProductId={filters.product_id}
           startDate={dateRange.start}
           endDate={dateRange.end}
-          interval={filters.interval}
           onProductChange={handleProductChange}
           onDateRangeChange={handleDateRangeChange}
-          onIntervalChange={handleIntervalChange}
           className="mb-8"
         />
 
@@ -225,6 +223,7 @@ export default function Dashboard() {
               <TonalityDynamicsChart
                 data={tonalityDynamics.dynamics}
                 interval={filters.interval}
+                onIntervalChange={handleIntervalChange}
               />
             ) : (
               <div className="bg-white rounded-lg p-6 h-96 flex items-center justify-center">

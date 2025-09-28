@@ -3,23 +3,37 @@
  */
 'use client';
 
+import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ChevronDown, Maximize2 } from 'lucide-react';
 import { formatChartDate, getTonalityColor, getTonalityLabel } from '@/lib/utils';
 import type { DynamicsPoint, IntervalType } from '@/types/api';
 
 interface TonalityDynamicsChartProps {
   data: DynamicsPoint[];
-  interval: IntervalType;
+  interval?: IntervalType;
+  onIntervalChange?: (interval: IntervalType) => void;
   className?: string;
-  showPercentage?: boolean;
 }
 
 export default function TonalityDynamicsChart({
   data,
-  interval,
+  interval = 'month',
+  onIntervalChange,
   className = '',
-  showPercentage = true,
 }: TonalityDynamicsChartProps) {
+  const [showPercentage, setShowPercentage] = useState(true);
+  const [isIntervalDropdownOpen, setIsIntervalDropdownOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Опции интервалов
+  const intervalOptions = [
+    { value: 'day' as IntervalType, label: 'День' },
+    { value: 'week' as IntervalType, label: 'Неделя' },
+    { value: 'month' as IntervalType, label: 'Месяц' },
+  ];
+
+  const currentIntervalOption = intervalOptions.find(opt => opt.value === interval) || intervalOptions[2];
   // Подготовка данных для графика
   const chartData = data.map(point => ({
     date: formatChartDate(point.date, interval),
@@ -132,19 +146,82 @@ export default function TonalityDynamicsChart({
   return (
     <div className={`bg-white rounded-lg p-6 ${className}`}>
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
               Динамика изменения тональностей
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Динамика без деления на категории
-            </p>
           </div>
           
-          <button className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
-            Развернуть диаграмму
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+          >
+            <Maximize2 className="w-4 h-4" />
+            <span>Развернуть диаграмму</span>
           </button>
+        </div>
+
+        {/* Панель управления */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Интервал */}
+            <div className="flex items-center space-x-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Интервал:
+              </label>
+              <div className="relative">
+                <button
+                  onClick={() => setIsIntervalDropdownOpen(!isIntervalDropdownOpen)}
+                  className="flex items-center justify-between w-24 px-3 py-2 text-left bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gazprom-blue"
+                >
+                  <span className="text-sm">{currentIntervalOption.label}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isIntervalDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isIntervalDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                    {intervalOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          onIntervalChange?.(option.value);
+                          setIsIntervalDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Переключатель режима отображения */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setShowPercentage(true)}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                showPercentage 
+                  ? 'bg-white text-gray-900 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Проценты
+            </button>
+            <button
+              onClick={() => setShowPercentage(false)}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                !showPercentage 
+                  ? 'bg-white text-gray-900 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Количество
+            </button>
+          </div>
         </div>
       </div>
 
@@ -207,29 +284,6 @@ export default function TonalityDynamicsChart({
         </div>
       )}
 
-      {/* Переключатель режима отображения */}
-      <div className="flex justify-center mt-4">
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <button
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              showPercentage 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Проценты
-          </button>
-          <button
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              !showPercentage 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Количество
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

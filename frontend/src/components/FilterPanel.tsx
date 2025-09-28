@@ -16,10 +16,8 @@ interface FilterPanelProps {
   selectedProductId?: number;
   startDate?: Date | null;
   endDate?: Date | null;
-  interval?: IntervalType;
   onProductChange?: (productId?: number) => void;
   onDateRangeChange?: (startDate?: Date, endDate?: Date) => void;
-  onIntervalChange?: (interval: IntervalType) => void;
   className?: string;
 }
 
@@ -28,10 +26,8 @@ export default function FilterPanel({
   selectedProductId,
   startDate,
   endDate,
-  interval = 'month',
   onProductChange,
   onDateRangeChange,
-  onIntervalChange,
   className = '',
 }: FilterPanelProps) {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
@@ -73,12 +69,6 @@ export default function FilterPanel({
   ];
 
 
-  // Опции интервалов
-  const intervalOptions = [
-    { value: 'day' as IntervalType, label: 'День' },
-    { value: 'week' as IntervalType, label: 'Неделя' },
-    { value: 'month' as IntervalType, label: 'Месяц' },
-  ];
 
   // Получаем название выбранного продукта
   const selectedProduct = products.find(p => p.id === selectedProductId);
@@ -126,7 +116,7 @@ export default function FilterPanel({
 
   return (
     <div className={`bg-gray-50 p-6 rounded-lg ${className}`}>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
         {/* Период */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -282,23 +272,6 @@ export default function FilterPanel({
           </Dropdown>
         </div>
 
-        {/* Интервал (для графика динамики) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Интервал
-          </label>
-          <select
-            value={interval}
-            onChange={(e) => onIntervalChange?.(e.target.value as IntervalType)}
-            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gazprom-blue"
-          >
-            {intervalOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
 
       </div>
 
@@ -308,7 +281,6 @@ export default function FilterPanel({
           onClick={() => {
             onProductChange?.(undefined);
             onDateRangeChange?.(undefined, undefined);
-            onIntervalChange?.('month');
           }}
           className="text-sm text-gray-600 hover:text-gray-900"
         >
