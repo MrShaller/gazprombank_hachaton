@@ -62,12 +62,13 @@ export function useSummaryStats() {
  */
 export function useTonalityDistribution(params: {
   product_id?: number;
+  product_ids?: number[];
   start_date?: string;
   end_date?: string;
 } = {}) {
   return useApiCall<TonalityDistributionResponse>(
     () => api.analytics.getTonalityDistribution(params),
-    [params.product_id, params.start_date, params.end_date]
+    [params.product_id, JSON.stringify(params.product_ids), params.start_date, params.end_date]
   );
 }
 
@@ -76,13 +77,14 @@ export function useTonalityDistribution(params: {
  */
 export function useTonalityDynamics(params: {
   product_id?: number;
+  product_ids?: number[];
   start_date?: string;
   end_date?: string;
   interval?: IntervalType;
 } = {}) {
   return useApiCall<TonalityDynamicsResponse>(
     () => api.analytics.getTonalityDynamics(params),
-    [params.product_id, params.start_date, params.end_date, params.interval]
+    [params.product_id, JSON.stringify(params.product_ids), params.start_date, params.end_date, params.interval]
   );
 }
 

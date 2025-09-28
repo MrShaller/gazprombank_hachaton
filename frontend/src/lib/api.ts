@@ -128,10 +128,18 @@ export const analyticsApi = {
    */
   getTonalityDistribution: async (params: {
     product_id?: number;
+    product_ids?: number[];
     start_date?: string;
     end_date?: string;
   } = {}): Promise<TonalityDistributionResponse> => {
-    const response = await apiClient.get<TonalityDistributionResponse>('/analytics/tonality', { params });
+    // Преобразуем product_ids в строку для API
+    const apiParams: any = { ...params };
+    if (params.product_ids && params.product_ids.length > 0) {
+      apiParams.product_ids = params.product_ids.join(',');
+      delete apiParams.product_id; // Удаляем устаревший параметр
+    }
+    
+    const response = await apiClient.get<TonalityDistributionResponse>('/analytics/tonality', { params: apiParams });
     return response.data;
   },
 
@@ -140,11 +148,19 @@ export const analyticsApi = {
    */
   getTonalityDynamics: async (params: {
     product_id?: number;
+    product_ids?: number[];
     start_date?: string;
     end_date?: string;
     interval?: IntervalType;
   } = {}): Promise<TonalityDynamicsResponse> => {
-    const response = await apiClient.get<TonalityDynamicsResponse>('/analytics/dynamics', { params });
+    // Преобразуем product_ids в строку для API
+    const apiParams: any = { ...params };
+    if (params.product_ids && params.product_ids.length > 0) {
+      apiParams.product_ids = params.product_ids.join(',');
+      delete apiParams.product_id; // Удаляем устаревший параметр
+    }
+    
+    const response = await apiClient.get<TonalityDynamicsResponse>('/analytics/dynamics', { params: apiParams });
     return response.data;
   },
 

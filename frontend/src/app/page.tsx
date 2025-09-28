@@ -41,12 +41,14 @@ export default function Dashboard() {
   
   const { data: tonalityDistribution, loading: tonalityLoading, refetch: refetchTonality } = useTonalityDistribution({
     product_id: filters.product_id,
+    product_ids: filters.product_ids && filters.product_ids.length > 0 ? filters.product_ids : undefined,
     start_date: dateRange.start ? dateToApiString(dateRange.start) : undefined,
     end_date: dateRange.end ? dateToApiString(dateRange.end) : undefined,
   });
 
   const { data: tonalityDynamics, loading: dynamicsLoading, refetch: refetchDynamics } = useTonalityDynamics({
     product_id: filters.product_id,
+    product_ids: filters.product_ids && filters.product_ids.length > 0 ? filters.product_ids : undefined,
     start_date: dateRange.start ? dateToApiString(dateRange.start) : undefined,
     end_date: dateRange.end ? dateToApiString(dateRange.end) : undefined,
     interval: filters.interval,

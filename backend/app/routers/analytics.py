@@ -29,7 +29,8 @@ def get_summary_stats(db: Session = Depends(get_db)):
 
 @router.get("/tonality")
 def get_tonality_distribution(
-    product_id: Optional[int] = Query(None, description="Фильтр по ID продукта"),
+    product_id: Optional[int] = Query(None, description="Фильтр по ID продукта (устаревший)"),
+    product_ids: Optional[str] = Query(None, description="Фильтр по ID продуктов (через запятую)"),
     start_date: Optional[datetime] = Query(None, description="Начальная дата"),
     end_date: Optional[datetime] = Query(None, description="Конечная дата"),
     db: Session = Depends(get_db)
@@ -43,13 +44,23 @@ def get_tonality_distribution(
     - Средний рейтинг для каждой тональности
     
     Фильтры:
-    - **product_id**: анализ только для конкретного продукта
+    - **product_id**: анализ только для конкретного продукта (устаревший)
+    - **product_ids**: анализ для нескольких продуктов (ID через запятую: "1,2,3")
     - **start_date**: начальная дата периода
     - **end_date**: конечная дата периода
     """
+    # Парсим product_ids из строки
+    parsed_product_ids = None
+    if product_ids:
+        try:
+            parsed_product_ids = [int(pid.strip()) for pid in product_ids.split(',') if pid.strip()]
+        except ValueError:
+            pass  # Игнорируем ошибки парсинга
+    
     distribution = AnalyticsCRUD.get_tonality_distribution(
         db=db,
         product_id=product_id,
+        product_ids=parsed_product_ids,
         start_date=start_date,
         end_date=end_date
     )
@@ -81,7 +92,8 @@ def get_tonality_distribution(
 
 @router.get("/dynamics")
 def get_tonality_dynamics(
-    product_id: Optional[int] = Query(None, description="Фильтр по ID продукта"),
+    product_id: Optional[int] = Query(None, description="Фильтр по ID продукта (устаревший)"),
+    product_ids: Optional[str] = Query(None, description="Фильтр по ID продуктов (через запятую)"),
     start_date: Optional[datetime] = Query(None, description="Начальная дата"),
     end_date: Optional[datetime] = Query(None, description="Конечная дата"),
     interval: str = Query("month", description="Интервал группировки: day, week, month"),
@@ -95,7 +107,8 @@ def get_tonality_dynamics(
     
     Параметры:
     - **interval**: интервал группировки (day, week, month)
-    - **product_id**: анализ только для конкретного продукта
+    - **product_id**: анализ только для конкретного продукта (устаревший)
+    - **product_ids**: анализ для нескольких продуктов (ID через запятую: "1,2,3")
     - **start_date**: начальная дата периода
     - **end_date**: конечная дата периода
     """
@@ -105,9 +118,18 @@ def get_tonality_dynamics(
             detail="Интервал должен быть одним из: day, week, month"
         )
     
+    # Парсим product_ids из строки
+    parsed_product_ids = None
+    if product_ids:
+        try:
+            parsed_product_ids = [int(pid.strip()) for pid in product_ids.split(',') if pid.strip()]
+        except ValueError:
+            pass  # Игнорируем ошибки парсинга
+    
     dynamics = AnalyticsCRUD.get_tonality_dynamics(
         db=db,
         product_id=product_id,
+        product_ids=parsed_product_ids,
         start_date=start_date,
         end_date=end_date,
         interval=interval

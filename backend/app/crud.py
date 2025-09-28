@@ -139,6 +139,7 @@ class AnalyticsCRUD:
     def get_tonality_distribution(
         db: Session,
         product_id: Optional[int] = None,
+        product_ids: Optional[List[int]] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ) -> List[Dict[str, Any]]:
@@ -150,7 +151,9 @@ class AnalyticsCRUD:
         ).filter(Review.is_valid == True)
         
         # Применение фильтров
-        if product_id:
+        if product_ids and len(product_ids) > 0:
+            query = query.filter(Review.product_id.in_(product_ids))
+        elif product_id:
             query = query.filter(Review.product_id == product_id)
         if start_date:
             query = query.filter(Review.review_date >= start_date)
@@ -177,6 +180,7 @@ class AnalyticsCRUD:
     def get_tonality_dynamics(
         db: Session,
         product_id: Optional[int] = None,
+        product_ids: Optional[List[int]] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         interval: str = 'month'  # 'day', 'week', 'month'
@@ -198,7 +202,9 @@ class AnalyticsCRUD:
         ).filter(Review.is_valid == True)
         
         # Применение фильтров
-        if product_id:
+        if product_ids and len(product_ids) > 0:
+            query = query.filter(Review.product_id.in_(product_ids))
+        elif product_id:
             query = query.filter(Review.product_id == product_id)
         if start_date:
             query = query.filter(Review.review_date >= start_date)
@@ -244,6 +250,7 @@ class AnalyticsCRUD:
     def get_rating_distribution(
         db: Session,
         product_id: Optional[int] = None,
+        product_ids: Optional[List[int]] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ) -> List[Dict[str, Any]]:
@@ -254,7 +261,9 @@ class AnalyticsCRUD:
         ).filter(Review.is_valid == True)
         
         # Применение фильтров
-        if product_id:
+        if product_ids and len(product_ids) > 0:
+            query = query.filter(Review.product_id.in_(product_ids))
+        elif product_id:
             query = query.filter(Review.product_id == product_id)
         if start_date:
             query = query.filter(Review.review_date >= start_date)
