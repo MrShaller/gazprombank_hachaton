@@ -3,7 +3,7 @@
  */
 'use client';
 
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Check } from 'lucide-react';
 import { getTonalityColor, formatPercent, formatNumber } from '@/lib/utils';
 import type { ProductStats } from '@/types/api';
 
@@ -56,21 +56,31 @@ export default function ProductsList({
     return (
       <div
         className={`
-          group relative bg-gazprom-blue rounded-lg p-4 cursor-pointer transition-all duration-200
-          ${isSelected ? 'ring-2 ring-gazprom-blue-light shadow-lg' : 'hover:shadow-md hover:bg-gazprom-blue-dark'}
+          group relative rounded-lg p-4 cursor-pointer transition-all duration-200
+          ${isSelected 
+            ? 'bg-gazprom-blue-light ring-2 ring-white shadow-lg border-2 border-white' 
+            : 'bg-gazprom-blue hover:shadow-md hover:bg-gazprom-blue-dark'
+          }
         `}
         onClick={() => toggleProduct(product.id)}
       >
         {/* Заголовок продукта */}
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-white font-medium text-sm truncate pr-2">
-            {product.name}
-          </h4>
+          <div className="flex items-center space-x-2">
+            {isSelected && (
+              <div className="flex-shrink-0 w-5 h-5 bg-white rounded-full flex items-center justify-center">
+                <Check className="w-3 h-3 text-gazprom-blue" />
+              </div>
+            )}
+            <h4 className={`font-medium text-sm truncate pr-2 ${isSelected ? 'text-white font-bold' : 'text-white'}`}>
+              {product.name}
+            </h4>
+          </div>
           <div className="flex items-center space-x-2 text-white">
             <span className="text-sm font-bold">
               {formatNumber(product.total_reviews)}
             </span>
-            {onProductSelect && (
+            {onProductSelect && !isSelected && (
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             )}
           </div>
@@ -151,9 +161,16 @@ export default function ProductsList({
       {/* Заголовок */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Все продукты/услуги
-          </h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Все продукты/услуги
+            </h3>
+            {selectedProductIds.length > 0 && (
+              <div className="bg-gazprom-blue text-white text-xs px-2 py-1 rounded-full font-medium">
+                {selectedProductIds.length} выбрано
+              </div>
+            )}
+          </div>
           <p className="text-sm text-gray-600 mt-1">
             Видим кол-во отзывов и соотношение тональностей
           </p>
