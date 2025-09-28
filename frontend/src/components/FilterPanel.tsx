@@ -14,12 +14,10 @@ import type { ProductStats, IntervalType } from '@/types/api';
 interface FilterPanelProps {
   products: ProductStats[];
   selectedProductId?: number;
-  selectedTonality?: string;
   startDate?: Date | null;
   endDate?: Date | null;
   interval?: IntervalType;
   onProductChange?: (productId?: number) => void;
-  onTonalityChange?: (tonality?: string) => void;
   onDateRangeChange?: (startDate?: Date, endDate?: Date) => void;
   onIntervalChange?: (interval: IntervalType) => void;
   className?: string;
@@ -28,19 +26,15 @@ interface FilterPanelProps {
 export default function FilterPanel({
   products,
   selectedProductId,
-  selectedTonality,
   startDate,
   endDate,
   interval = 'month',
   onProductChange,
-  onTonalityChange,
   onDateRangeChange,
   onIntervalChange,
   className = '',
 }: FilterPanelProps) {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const [isTonalityDropdownOpen, setIsTonalityDropdownOpen] = useState(false);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   
   // Локальное состояние для отслеживания выбора дат
   const [tempStartDate, setTempStartDate] = useState<Date | null>(startDate || null);
@@ -78,13 +72,6 @@ export default function FilterPanel({
     }
   ];
 
-  // Опции тональности
-  const tonalityOptions = [
-    { value: undefined, label: 'Все' },
-    { value: 'положительно', label: 'Положительная' },
-    { value: 'нейтрально', label: 'Нейтральная' },
-    { value: 'отрицательно', label: 'Отрицательная' },
-  ];
 
   // Опции интервалов
   const intervalOptions = [
@@ -96,10 +83,6 @@ export default function FilterPanel({
   // Получаем название выбранного продукта
   const selectedProduct = products.find(p => p.id === selectedProductId);
   const selectedProductName = selectedProduct ? selectedProduct.name : 'Все';
-
-  // Получаем название выбранной тональности
-  const selectedTonalityOption = tonalityOptions.find(t => t.value === selectedTonality);
-  const selectedTonalityName = selectedTonalityOption ? selectedTonalityOption.label : 'Все';
 
   // Форматирование диапазона дат
   const formatDateRange = () => {
@@ -143,7 +126,7 @@ export default function FilterPanel({
 
   return (
     <div className={`bg-gray-50 p-6 rounded-lg ${className}`}>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
         {/* Период */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -260,30 +243,6 @@ export default function FilterPanel({
           </div>
         </div>
 
-        {/* Тональность */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Тональность
-          </label>
-          <Dropdown
-            isOpen={isTonalityDropdownOpen}
-            onToggle={() => setIsTonalityDropdownOpen(!isTonalityDropdownOpen)}
-            trigger={<span>{selectedTonalityName}</span>}
-          >
-            {tonalityOptions.map((option) => (
-              <button
-                key={option.value || 'all'}
-                onClick={() => {
-                  onTonalityChange?.(option.value);
-                  setIsTonalityDropdownOpen(false);
-                }}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
-              >
-                {option.label}
-              </button>
-            ))}
-          </Dropdown>
-        </div>
 
         {/* Продукт */}
         <div>
@@ -348,7 +307,6 @@ export default function FilterPanel({
         <button
           onClick={() => {
             onProductChange?.(undefined);
-            onTonalityChange?.(undefined);
             onDateRangeChange?.(undefined, undefined);
             onIntervalChange?.('month');
           }}

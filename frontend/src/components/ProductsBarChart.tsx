@@ -3,7 +3,9 @@
  */
 'use client';
 
+import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChevronDown } from 'lucide-react';
 import { formatNumber, truncateText } from '@/lib/utils';
 import type { ProductStats } from '@/types/api';
 
@@ -18,15 +20,39 @@ export default function ProductsBarChart({
   className = '',
   maxProducts = 10,
 }: ProductsBarChartProps) {
+  const [selectedTonality, setSelectedTonality] = useState<string>('all');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Опции тональности
+  const tonalityOptions = [
+    { value: 'all', label: 'Все', color: '#1e3a8a' },
+    { value: 'positive', label: 'Положительная', color: '#22c55e' },
+    { value: 'neutral', label: 'Нейтральная', color: '#6b7280' },
+    { value: 'negative', label: 'Отрицательная', color: '#f97316' },
+  ];
+
+  const currentTonalityOption = tonalityOptions.find(opt => opt.value === selectedTonality) || tonalityOptions[0];
+
+  // Функция для получения значения по выбранной тональности
+  const getTonalityValue = (product: ProductStats, tonality: string) => {
+    switch (tonality) {
+      case 'positive': return product.positive_reviews;
+      case 'negative': return product.negative_reviews;
+      case 'neutral': return product.neutral_reviews;
+      default: return product.total_reviews;
+    }
+  };
+
   // Подготовка данных для диаграммы
   const chartData = products
     .filter(product => product.total_reviews > 0)
-    .sort((a, b) => b.total_reviews - a.total_reviews)
+    .sort((a, b) => getTonalityValue(b, selectedTonality) - getTonalityValue(a, selectedTonality))
     .slice(0, maxProducts)
     .map(product => ({
       name: truncateText(product.name, 15),
       fullName: product.name,
-      value: product.total_reviews,
+      value: getTonalityValue(product, selectedTonality),
+      total: product.total_reviews,
       positive: product.positive_reviews,
       negative: product.negative_reviews,
       neutral: product.neutral_reviews,
@@ -44,9 +70,18 @@ export default function ProductsBarChart({
           
           <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Всего отзывов:</span>
+              <span className="text-sm text-gray-600">
+                {selectedTonality === 'all' ? 'Всего отзывов:' : `${currentTonalityOption.label}:`}
+              </span>
               <span className="text-sm font-medium">{formatNumber(data.value)}</span>
             </div>
+            
+            {selectedTonality !== 'all' && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Всего отзывов:</span>
+                <span className="text-sm font-medium">{formatNumber(data.total)}</span>
+              </div>
+            )}
             
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Положительные:</span>
@@ -98,7 +133,7 @@ export default function ProductsBarChart({
   return (
     <div className={`bg-white rounded-lg p-6 ${className}`}>
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
               Все продукты/услуги
@@ -110,9 +145,54 @@ export default function ProductsBarChart({
           
           <div className="text-right">
             <div className="text-2xl font-bold text-gazprom-blue">
-              {products.reduce((sum, p) => sum + p.total_reviews, 0).toLocaleString('ru-RU')}
+              {chartData.reduce((sum, p) => sum + p.value, 0).toLocaleString('ru-RU')}
             </div>
-            <div className="text-sm text-gray-600">Всего отзывов</div>
+            <div className="text-sm text-gray-600">
+              {selectedTonality === 'all' ? 'Всего отзывов' : currentTonalityOption.label}
+            </div>
+          </div>
+        </div>
+
+        {/* Фильтр тональности */}
+        <div className="flex items-center space-x-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Тональность:
+          </label>
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center justify-between w-48 px-3 py-2 text-left bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gazprom-blue"
+            >
+              <div className="flex items-center space-x-2">
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: currentTonalityOption.color }}
+                />
+                <span>{currentTonalityOption.label}</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                {tonalityOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setSelectedTonality(option.value);
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: option.color }}
+                    />
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -140,9 +220,9 @@ export default function ProductsBarChart({
             
             <Bar 
               dataKey="value" 
-              fill="#1e3a8a"
+              fill={currentTonalityOption.color}
               radius={[4, 4, 0, 0]}
-              stroke="#1e2a5a"
+              stroke={currentTonalityOption.color}
               strokeWidth={1}
             />
           </BarChart>
@@ -170,8 +250,11 @@ export default function ProductsBarChart({
       {/* Легенда */}
       <div className="mt-4 flex justify-center">
         <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <div className="w-3 h-3 bg-gazprom-blue rounded"></div>
-          <span>Общее количество отзывов</span>
+          <div 
+            className="w-3 h-3 rounded"
+            style={{ backgroundColor: currentTonalityOption.color }}
+          />
+          <span>{currentTonalityOption.label}</span>
         </div>
       </div>
     </div>

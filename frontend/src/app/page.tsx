@@ -167,12 +167,10 @@ export default function Dashboard() {
         <FilterPanel
           products={productsStats?.products || []}
           selectedProductId={filters.product_id}
-          selectedTonality={filters.tonality}
           startDate={dateRange.start}
           endDate={dateRange.end}
           interval={filters.interval}
           onProductChange={handleProductChange}
-          onTonalityChange={handleTonalityChange}
           onDateRangeChange={handleDateRangeChange}
           onIntervalChange={handleIntervalChange}
           className="mb-8"
