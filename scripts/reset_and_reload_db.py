@@ -106,7 +106,7 @@ def get_file_stats(file_path: str) -> dict:
         logger.error(f"Ошибка анализа файла: {e}")
         return {'error': str(e)}
 
-def reset_and_reload_database(json_file_path: str):
+def reset_and_reload_database(json_file_path: str, aspects_file_path: str = None):
     """Полная перезагрузка базы данных"""
     logger.info("=" * 60)
     logger.info("НАЧАЛО ПЕРЕЗАГРУЗКИ БАЗЫ ДАННЫХ")
@@ -149,6 +149,21 @@ def reset_and_reload_database(json_file_path: str):
         logger.info(f"✓ Пропущено отзывов: {result['reviews_skipped']}")
         logger.info(f"✓ Ошибок: {result['errors']}")
         
+        # Шаг 3.5: Загрузка анализа аспектов (если файл предоставлен)
+        if aspects_file_path and Path(aspects_file_path).exists():
+            logger.info("\n" + "=" * 40)
+            logger.info("ШАГ 3.5: ЗАГРУЗКА АНАЛИЗА АСПЕКТОВ")
+            logger.info("=" * 40)
+            logger.info(f"Загрузка анализа аспектов из {aspects_file_path}")
+            
+            aspects_loaded = etl.load_aspects_from_json(aspects_file_path)
+            logger.info(f"✓ Загружено аспектов: {etl.stats['aspects_loaded']}")
+            logger.info(f"✓ Пропущено аспектов: {etl.stats['aspects_skipped']}")
+        elif aspects_file_path:
+            logger.warning(f"⚠️  Файл анализа аспектов не найден: {aspects_file_path}")
+        else:
+            logger.info("ℹ️  Файл анализа аспектов не указан, пропускаем загрузку аспектов")
+        
         # Шаг 4: Построение статистики
         logger.info("\n" + "=" * 40)
         logger.info("ШАГ 4: ПОСТРОЕНИЕ СТАТИСТИКИ")
@@ -166,6 +181,8 @@ def reset_and_reload_database(json_file_path: str):
         logger.info(f"Продуктов создано: {result['products_created']}")
         logger.info(f"Отзывов загружено: {result['reviews_loaded']}")
         logger.info(f"Отзывов пропущено: {result['reviews_skipped']}")
+        logger.info(f"Аспектов загружено: {result['aspects_loaded']}")
+        logger.info(f"Аспектов пропущено: {result['aspects_skipped']}")
         logger.info(f"Ошибок: {result['errors']}")
         logger.info(f"Статистических записей: {stats_result.get('records_created', 0)}")
         logger.info("=" * 60)
@@ -180,17 +197,28 @@ def reset_and_reload_database(json_file_path: str):
 def main():
     """Основная функция"""
     if len(sys.argv) < 2:
-        print("Использование: python reset_and_reload_db.py <json_file_path> [--force]")
+        print("Использование: python reset_and_reload_db.py <json_file_path> [aspects_file_path] [--force]")
         print("Пример: python reset_and_reload_db.py data/raw/all_reviews.json --force")
+        print("Пример: python reset_and_reload_db.py data/raw/all_reviews.json data/processed/analysis/products_analysis.json --force")
         sys.exit(1)
     
     json_file_path = sys.argv[1]
-    force = len(sys.argv) > 2 and sys.argv[2] == '--force'
+    aspects_file_path = None
+    force = False
+    
+    # Парсим аргументы
+    for arg in sys.argv[2:]:
+        if arg == '--force':
+            force = True
+        elif arg.endswith('.json'):
+            aspects_file_path = arg
     
     # Подтверждение операции
     if not force:
         print("⚠️  ВНИМАНИЕ: Эта операция удалит ВСЕ данные из базы данных!")
         print(f"Файл для загрузки: {json_file_path}")
+        if aspects_file_path:
+            print(f"Файл анализа аспектов: {aspects_file_path}")
         
         try:
             response = input("Продолжить? (yes/no): ").lower().strip()
@@ -203,8 +231,10 @@ def main():
     else:
         print("⚠️  ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАГРУЗКА БАЗЫ ДАННЫХ")
         print(f"Файл для загрузки: {json_file_path}")
+        if aspects_file_path:
+            print(f"Файл анализа аспектов: {aspects_file_path}")
     
-    reset_and_reload_database(json_file_path)
+    reset_and_reload_database(json_file_path, aspects_file_path)
 
 if __name__ == "__main__":
     main()
