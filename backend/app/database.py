@@ -6,12 +6,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from typing import Generator
+from .config import settings
 
 # Настройки подключения к PostgreSQL
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/gazprombank_reviews"
-)
+DATABASE_URL = settings.database_connection_url
 
 # Создание движка SQLAlchemy
 engine = create_engine(
