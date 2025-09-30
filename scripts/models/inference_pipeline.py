@@ -9,9 +9,7 @@ fake_module = types.ModuleType("scripts.models.inference_pipeline")
 fake_module.tokenize_lemma = tokenize_lemma
 sys.modules["scripts.models.inference_pipeline"] = fake_module
 
-CSV_PATH = "data/interim/clauses.csv"
-OUT_CLAUSES = "data/processed/result_clauses.csv"
-OUT_FINAL   = "data/processed/result_final.csv"
+OUT_FINAL = "data/processed/result_final.json"
 
 # инициализация пайплайна
 pipe = InferencePipeline(
@@ -19,15 +17,22 @@ pipe = InferencePipeline(
     xlmr_path="models/xlmr"
 )
 
-# читаем данные (для теста только первые 40)
-df = pd.read_csv(CSV_PATH).head(40)
+# 🔹 тестовые данные (обычно приходят из запроса в FastAPI)
+sample_json = [
+    {"id": 1, "text": "Банк обманул меня с начислением кешбэка!"},
+    {"id": 2, "text": "Поддержка работает замечательно, но карта ужасная."}
+]
 
-# 1️⃣ Поклаузные предсказания
-#res_clauses = pipe.run(df)
-#res_clauses.to_csv(OUT_CLAUSES, index=False)
-#print(f"✅ Результат по клауза́м сохранён в {OUT_CLAUSES}")
+# 1️⃣ Поклаузные предсказания из JSON
+df_clauses = pipe.run_from_json(sample_json)
+print("=== Поклаузные предсказания ===")
+print(df_clauses.head())
 
-# 2️⃣ Финальная агрегация по review_id
-res_final = pipe.run_and_aggregate(df)
-res_final.to_csv(OUT_FINAL, index=False)
+# 2️⃣ Финальная агрегация из JSON
+df_final = pipe.run_and_aggregate_from_json(sample_json)
+print("=== Финальная агрегация ===")
+print(df_final.head())
+
+# можно сохранить в JSON
+df_final.to_json(OUT_FINAL, orient="records", force_ascii=False, indent=2)
 print(f"✅ Финальный результат сохранён в {OUT_FINAL}")
