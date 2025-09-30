@@ -134,3 +134,21 @@ export const TONALITY_COLORS = {
   'отрицательно': '#f97316', 
   'нейтрально': '#6b7280',
 } as const;
+
+// Типы для анализа аспектов продуктов
+export interface ProductAspect {
+  product_id: number;
+  product_name: string;
+  avg_rating: number | null;
+  pros: string[];
+  cons: string[];
+  total_aspects: number;
+}
+
+export interface ProductAspectsResponse {
+  products: ProductAspect[];
+  total_products: number;
+  filters: {
+    product_ids?: number[];
+  };
+}

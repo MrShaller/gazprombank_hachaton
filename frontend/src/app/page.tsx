@@ -13,6 +13,7 @@ import TonalityPieChart from '@/components/TonalityPieChart';
 import ProductsList from '@/components/ProductsList';
 import TonalityDynamicsChart from '@/components/TonalityDynamicsChart';
 import ProductsBarChart from '@/components/ProductsBarChart';
+import ProductAspectsAnalysis from '@/components/ProductAspectsAnalysis';
 
 // Хуки и утилиты
 import { 
@@ -256,12 +257,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Кнопка "Продолжение страницы" */}
-        <div className="mt-8 text-center">
-          <button className="px-6 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-            Продолжение страницы
-          </button>
+        {/* Анализ аспектов продуктов */}
+        <div className="mt-8">
+          <ProductAspectsAnalysis 
+            selectedProductIds={filters.product_ids}
+          />
         </div>
+
       </main>
 
       {/* Футер */}

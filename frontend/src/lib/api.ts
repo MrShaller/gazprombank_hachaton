@@ -12,13 +12,13 @@ import type {
   SummaryStats,
   AnalyticsFilters,
   IntervalType,
+  ProductAspect,
+  ProductAspectsResponse,
 } from '@/types/api';
 
 // Конфигурация API клиента
-// В браузере используем относительные пути через Next.js прокси
-const API_BASE_URL = typeof window !== 'undefined' 
-  ? '/api/v1'  // Браузер - используем прокси
-  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'; // SSR - прямое подключение
+// Временно используем прямое подключение из-за проблем с прокси
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 console.log('API_BASE_URL:', API_BASE_URL); // Для отладки
 
@@ -235,11 +235,49 @@ export const apiUtils = {
   },
 };
 
+/**
+ * API для работы с анализом аспектов продуктов
+ */
+export const aspectsApi = {
+  /**
+   * Получить анализ аспектов для конкретного продукта
+   */
+  getProductAspects: async (productId: number): Promise<ProductAspect> => {
+    const response = await apiClient.get<ProductAspect>(`/aspects/product/${productId}`);
+    return response.data;
+  },
+
+  /**
+   * Получить анализ аспектов для нескольких продуктов
+   */
+  getMultipleProductsAspects: async (params: {
+    product_ids?: number[];
+  } = {}): Promise<ProductAspectsResponse> => {
+    let url = '/aspects/products';
+    
+    if (params.product_ids && params.product_ids.length > 0) {
+      url += `?product_ids=${params.product_ids.join(',')}`;
+    }
+    
+    const response = await apiClient.get<ProductAspectsResponse>(url);
+    return response.data;
+  },
+
+  /**
+   * Получить анализ аспектов для всех продуктов
+   */
+  getAllProductsAspects: async (): Promise<ProductAspectsResponse> => {
+    const response = await apiClient.get<ProductAspectsResponse>('/aspects/all');
+    return response.data;
+  },
+};
+
 // Экспорт по умолчанию
 const api = {
   products: productsApi,
   reviews: reviewsApi,
   analytics: analyticsApi,
+  aspects: aspectsApi,
   utils: apiUtils,
 };
 
