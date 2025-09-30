@@ -78,8 +78,8 @@ export default function TonalityPieChart({
   };
 
   return (
-    <div className={`bg-white rounded-lg p-6 ${className}`}>
-      <div className="mb-4">
+    <div className={`bg-white rounded-lg shadow-sm h-[500px] flex flex-col ${className}`}>
+      <div className="p-6 border-b border-gray-200 flex-shrink-0">
         <h3 className="text-lg font-semibold text-gray-900">
           Распределение тональностей
         </h3>
@@ -88,9 +88,9 @@ export default function TonalityPieChart({
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-center">
+      <div className="flex-1 flex flex-col lg:flex-row items-center p-6">
         {/* Диаграмма */}
-        <div className="w-full lg:w-2/3 h-80">
+        <div className="w-full lg:w-2/3 h-full min-h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

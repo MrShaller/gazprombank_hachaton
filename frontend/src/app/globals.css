@@ -237,6 +237,36 @@ a {
   100% { transform: rotate(360deg); }
 }
 
+/* Кастомный скролл для списка продуктов */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f9fafb;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Плавная анимация для скролла */
+.custom-scrollbar {
+  scroll-behavior: smooth;
+}
+
 /* Responsive стили */
 @media (max-width: 768px) {
   .mobile-hide {

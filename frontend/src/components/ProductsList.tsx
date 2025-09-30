@@ -157,54 +157,54 @@ export default function ProductsList({
   };
 
   return (
-    <div className={`bg-white rounded-lg p-6 ${className}`}>
-      {/* Заголовок */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center space-x-2">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Все продукты/услуги
-            </h3>
-            {selectedProductIds.length > 0 && (
-              <div className="bg-gazprom-blue text-white text-xs px-2 py-1 rounded-full font-medium">
-                {selectedProductIds.length} выбрано
+    <div className={`bg-white rounded-lg shadow-sm h-[500px] flex flex-col ${className}`}>
+      {/* Заголовок - фиксированный */}
+      <div className="p-6 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Все продукты/услуги
+              </h3>
+              {selectedProductIds.length > 0 && (
+                <div className="bg-gazprom-blue text-white text-xs px-2 py-1 rounded-full font-medium">
+                  {selectedProductIds.length} выбрано
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Видим кол-во отзывов и соотношение тональностей
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Список продуктов - прокручиваемый */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto custom-scrollbar">
+          <div className="p-6 space-y-3">
+            {filteredProducts.map((product) => (
+              <ProductBar key={product.id} product={product} />
+            ))}
+          </div>
+
+          {/* Сообщение о пустом списке */}
+          {filteredProducts.length === 0 && (
+            <div className="p-6 text-center py-8">
+              <div className="text-gray-500 text-sm">
+                Нет продуктов с отзывами
               </div>
-            )}
-          </div>
-          <p className="text-sm text-gray-600 mt-1">
-            Видим кол-во отзывов и соотношение тональностей
-          </p>
+            </div>
+          )}
         </div>
-        
-        {!showAll && filteredProducts.length > maxItems && (
-          <button className="text-gazprom-blue hover:text-gazprom-blue-dark text-sm font-medium">
-            Перелистнуть
-          </button>
-        )}
       </div>
 
-      {/* Список продуктов */}
-      <div className="space-y-3">
-        {displayProducts.map((product) => (
-          <ProductBar key={product.id} product={product} />
-        ))}
-      </div>
-
-      {/* Сообщение о пустом списке */}
-      {displayProducts.length === 0 && (
-        <div className="text-center py-8">
-          <div className="text-gray-500 text-sm">
-            Нет продуктов с отзывами
+      {/* Индикатор прокрутки - фиксированный */}
+      {filteredProducts.length > 4 && (
+        <div className="px-6 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+          <div className="text-xs text-gray-500 text-center">
+            📊 {filteredProducts.length} продуктов • прокрутите для просмотра всех
           </div>
-        </div>
-      )}
-
-      {/* Информация о скрытых элементах */}
-      {!showAll && filteredProducts.length > maxItems && (
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
-            Показано {displayProducts.length} из {filteredProducts.length} продуктов
-          </p>
         </div>
       )}
     </div>

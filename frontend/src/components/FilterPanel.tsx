@@ -213,7 +213,7 @@ export default function FilterPanel({
           </div>
           
           {/* Быстрые кнопки выбора периода */}
-          <div className="flex flex-wrap gap-1 mt-2">
+          <div className="grid grid-cols-2 gap-1 mt-2">
             {quickDateRanges.map((range, index) => (
               <button
                 key={index}
@@ -229,7 +229,7 @@ export default function FilterPanel({
                   // Вызываем callback
                   onDateRangeChange?.(start, end);
                 }}
-                className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gazprom-blue"
+                className="px-3 py-2 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gazprom-blue transition-colors duration-200"
               >
                 {range.label}
               </button>
@@ -241,7 +241,7 @@ export default function FilterPanel({
                 setTempEndDate(null);
                 onDateRangeChange?.(undefined, undefined);
               }}
-              className="px-2 py-1 text-xs bg-gazprom-blue text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-gazprom-blue"
+              className="col-span-2 px-3 py-2 text-xs bg-gazprom-blue text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-gazprom-blue transition-colors duration-200"
             >
               За всё время
             </button>
