@@ -15,8 +15,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql import func
 
-from models import Base, Product, Review
+from models import Base, Product, Review, ProductAspect
 from config import settings
 
 # Настройка логирования
@@ -47,6 +48,8 @@ class ReviewETL:
             'products_existing': 0,
             'reviews_loaded': 0,
             'reviews_skipped': 0,
+            'aspects_loaded': 0,
+            'aspects_skipped': 0,
             'errors': 0
         }
     
@@ -117,13 +120,22 @@ class ReviewETL:
     
     def parse_review_date(self, date_str: str) -> datetime:
         """
-        Парсинг даты отзыва из формата 'dd.mm.yyyy hh:mm'
+        Парсинг даты отзыва из различных форматов
         """
-        try:
-            return datetime.strptime(date_str, '%d.%m.%Y %H:%M')
-        except ValueError:
-            logger.error(f"Не удалось распарсить дату отзыва: {date_str}")
-            raise
+        # Список поддерживаемых форматов
+        formats = [
+            '%d.%m.%Y %H:%M',  # 31.05.2025 20:59
+            '%Y-%m-%d',        # 2025-05-02
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        logger.error(f"Не удалось распарсить дату отзыва: {date_str}")
+        raise ValueError(f"Неподдерживаемый формат даты: {date_str}")
     
     def parse_parsed_at(self, date_str: str) -> datetime:
         """
@@ -215,13 +227,13 @@ class ReviewETL:
         try:
             for review_data in reviews_data:
                 try:
+                    # Получение или создание продукта (делаем ДО валидации)
+                    product = self.get_or_create_product(session, review_data['product_type'])
+                    
                     # Валидация данных
                     if not self.validate_review_data(review_data):
                         self.stats['reviews_skipped'] += 1
                         continue
-                    
-                    # Получение или создание продукта
-                    product = self.get_or_create_product(session, review_data['product_type'])
                     
                     # Парсинг дат
                     review_date = self.parse_review_date(review_data['review_date'])
@@ -318,10 +330,114 @@ class ReviewETL:
         logger.info(f"Продуктов найдено существующих: {self.stats['products_existing']}")
         logger.info(f"Отзывов загружено: {self.stats['reviews_loaded']}")
         logger.info(f"Отзывов пропущено: {self.stats['reviews_skipped']}")
+        logger.info(f"Аспектов загружено: {self.stats['aspects_loaded']}")
+        logger.info(f"Аспектов пропущено: {self.stats['aspects_skipped']}")
         logger.info(f"Ошибок: {self.stats['errors']}")
         logger.info("=" * 50)
         
         return self.stats
+    
+    def load_aspects_from_json(self, json_file_path: str) -> int:
+        """
+        Загрузка анализа аспектов продуктов из JSON файла
+        
+        Args:
+            json_file_path: Путь к JSON файлу с анализом аспектов
+            
+        Returns:
+            int: Количество загруженных аспектов
+        """
+        logger.info(f"Загрузка анализа аспектов из файла: {json_file_path}")
+        
+        try:
+            with open(json_file_path, 'r', encoding='utf-8') as file:
+                aspects_data = json.load(file)
+        except Exception as e:
+            logger.error(f"Ошибка чтения файла {json_file_path}: {e}")
+            self.stats['errors'] += 1
+            return 0
+        
+        if 'product_type' not in aspects_data:
+            logger.error(f"Файл {json_file_path} не содержит ключ 'product_type'")
+            self.stats['errors'] += 1
+            return 0
+        
+        loaded_count = 0
+        session = self.SessionLocal()
+        
+        try:
+            for product_name, product_aspects in aspects_data['product_type'].items():
+                try:
+                    # Получаем продукт по имени
+                    product = session.query(Product).filter(Product.name == product_name).first()
+                    
+                    if not product:
+                        logger.warning(f"Продукт '{product_name}' не найден в базе данных. Пропускаем.")
+                        self.stats['aspects_skipped'] += 1
+                        continue
+                    
+                    # Удаляем существующие аспекты для этого продукта
+                    existing_aspects = session.query(ProductAspect).filter(
+                        ProductAspect.product_id == product.id
+                    ).all()
+                    
+                    for aspect in existing_aspects:
+                        session.delete(aspect)
+                    
+                    # Вычисляем среднюю оценку для продукта
+                    avg_rating_query = session.query(func.avg(Review.rating)).filter(
+                        Review.product_id == product.id
+                    ).scalar()
+                    avg_rating = float(avg_rating_query) if avg_rating_query else None
+                    
+                    # Загружаем плюсы
+                    for pros_text in product_aspects.get('pros', []):
+                        if pros_text.strip():
+                            aspect = ProductAspect(
+                                product_id=product.id,
+                                aspect_type='pros',
+                                aspect_text=pros_text.strip(),
+                                avg_rating=avg_rating
+                            )
+                            session.add(aspect)
+                            loaded_count += 1
+                            self.stats['aspects_loaded'] += 1
+                    
+                    # Загружаем минусы
+                    for cons_text in product_aspects.get('cons', []):
+                        if cons_text.strip():
+                            aspect = ProductAspect(
+                                product_id=product.id,
+                                aspect_type='cons',
+                                aspect_text=cons_text.strip(),
+                                avg_rating=avg_rating
+                            )
+                            session.add(aspect)
+                            loaded_count += 1
+                            self.stats['aspects_loaded'] += 1
+                    
+                    logger.info(f"Загружены аспекты для продукта '{product_name}': "
+                              f"{len(product_aspects.get('pros', []))} плюсов, "
+                              f"{len(product_aspects.get('cons', []))} минусов")
+                
+                except Exception as e:
+                    logger.error(f"Ошибка обработки аспектов для продукта {product_name}: {e}")
+                    self.stats['errors'] += 1
+                    session.rollback()
+            
+            # Финальный коммит
+            session.commit()
+            logger.info(f"Завершена загрузка аспектов: {loaded_count} записей")
+            
+        except Exception as e:
+            logger.error(f"Критическая ошибка при загрузке аспектов из {json_file_path}: {e}")
+            session.rollback()
+            self.stats['errors'] += 1
+            
+        finally:
+            session.close()
+        
+        return loaded_count
 
 
 def main():
