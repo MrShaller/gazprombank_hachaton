@@ -11,6 +11,18 @@ from ..crud import AnalyticsCRUD
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
+def parse_date(date_str: Optional[str]) -> Optional[datetime]:
+    """Парсинг даты из строки в формате YYYY-MM-DD"""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Неверный формат даты: {date_str}. Используйте YYYY-MM-DD"
+        )
+
 
 @router.get("/summary")
 def get_summary_stats(db: Session = Depends(get_db)):
@@ -31,8 +43,8 @@ def get_summary_stats(db: Session = Depends(get_db)):
 def get_tonality_distribution(
     product_id: Optional[int] = Query(None, description="Фильтр по ID продукта (устаревший)"),
     product_ids: Optional[str] = Query(None, description="Фильтр по ID продуктов (через запятую)"),
-    start_date: Optional[datetime] = Query(None, description="Начальная дата"),
-    end_date: Optional[datetime] = Query(None, description="Конечная дата"),
+    start_date: Optional[str] = Query(None, description="Начальная дата (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="Конечная дата (YYYY-MM-DD)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -57,12 +69,16 @@ def get_tonality_distribution(
         except ValueError:
             pass  # Игнорируем ошибки парсинга
     
+    # Парсим даты
+    parsed_start_date = parse_date(start_date)
+    parsed_end_date = parse_date(end_date)
+    
     distribution = AnalyticsCRUD.get_tonality_distribution(
         db=db,
         product_id=product_id,
         product_ids=parsed_product_ids,
-        start_date=start_date,
-        end_date=end_date
+        start_date=parsed_start_date,
+        end_date=parsed_end_date
     )
     
     if not distribution:
@@ -72,6 +88,7 @@ def get_tonality_distribution(
             "message": "Нет данных для указанных фильтров",
             "filters": {
                 "product_id": product_id,
+                "product_ids": parsed_product_ids,
                 "start_date": start_date,
                 "end_date": end_date
             }
@@ -84,6 +101,7 @@ def get_tonality_distribution(
         "total_reviews": total_reviews,
         "filters": {
             "product_id": product_id,
+            "product_ids": parsed_product_ids,
             "start_date": start_date,
             "end_date": end_date
         }
@@ -94,8 +112,8 @@ def get_tonality_distribution(
 def get_tonality_dynamics(
     product_id: Optional[int] = Query(None, description="Фильтр по ID продукта (устаревший)"),
     product_ids: Optional[str] = Query(None, description="Фильтр по ID продуктов (через запятую)"),
-    start_date: Optional[datetime] = Query(None, description="Начальная дата"),
-    end_date: Optional[datetime] = Query(None, description="Конечная дата"),
+    start_date: Optional[str] = Query(None, description="Начальная дата (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="Конечная дата (YYYY-MM-DD)"),
     interval: str = Query("month", description="Интервал группировки: day, week, month"),
     db: Session = Depends(get_db)
 ):
@@ -126,12 +144,16 @@ def get_tonality_dynamics(
         except ValueError:
             pass  # Игнорируем ошибки парсинга
     
+    # Парсим даты
+    parsed_start_date = parse_date(start_date)
+    parsed_end_date = parse_date(end_date)
+    
     dynamics = AnalyticsCRUD.get_tonality_dynamics(
         db=db,
         product_id=product_id,
         product_ids=parsed_product_ids,
-        start_date=start_date,
-        end_date=end_date,
+        start_date=parsed_start_date,
+        end_date=parsed_end_date,
         interval=interval
     )
     
@@ -160,8 +182,8 @@ def get_tonality_dynamics(
 @router.get("/ratings")
 def get_rating_distribution(
     product_id: Optional[int] = Query(None, description="Фильтр по ID продукта"),
-    start_date: Optional[datetime] = Query(None, description="Начальная дата"),
-    end_date: Optional[datetime] = Query(None, description="Конечная дата"),
+    start_date: Optional[str] = Query(None, description="Начальная дата (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="Конечная дата (YYYY-MM-DD)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -171,11 +193,15 @@ def get_rating_distribution(
     - Количество отзывов для каждого рейтинга
     - Процентное распределение
     """
+    # Парсим даты
+    parsed_start_date = parse_date(start_date)
+    parsed_end_date = parse_date(end_date)
+    
     distribution = AnalyticsCRUD.get_rating_distribution(
         db=db,
         product_id=product_id,
-        start_date=start_date,
-        end_date=end_date
+        start_date=parsed_start_date,
+        end_date=parsed_end_date
     )
     
     if not distribution:
