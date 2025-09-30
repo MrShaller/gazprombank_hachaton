@@ -139,3 +139,45 @@ class ErrorResponse(BaseModel):
     message: str = Field(..., description="Сообщение об ошибке")
     error_code: Optional[str] = Field(None, description="Код ошибки")
     details: Optional[Dict[str, Any]] = Field(None, description="Дополнительные детали ошибки")
+
+
+# Схемы для анализа аспектов продуктов
+
+class ProductAspectBase(BaseModel):
+    """Базовая схема аспекта продукта"""
+    aspect_type: str = Field(..., description="Тип аспекта: 'pros' или 'cons'")
+    aspect_text: str = Field(..., max_length=500, description="Текст аспекта")
+    avg_rating: Optional[float] = Field(None, description="Средняя оценка продукта")
+
+
+class ProductAspectCreate(ProductAspectBase):
+    """Схема для создания аспекта продукта"""
+    product_id: int = Field(..., description="ID продукта")
+
+
+class ProductAspect(ProductAspectBase):
+    """Схема аспекта продукта с полными данными"""
+    id: int
+    product_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ProductAspectsResponse(BaseModel):
+    """Ответ с анализом аспектов продукта"""
+    product_id: int = Field(..., description="ID продукта")
+    product_name: str = Field(..., description="Название продукта")
+    avg_rating: Optional[float] = Field(None, description="Средняя оценка продукта")
+    pros: List[str] = Field(default_factory=list, description="Список преимуществ")
+    cons: List[str] = Field(default_factory=list, description="Список недостатков")
+    total_aspects: int = Field(..., description="Общее количество аспектов")
+
+
+class ProductsAspectsResponse(BaseModel):
+    """Ответ с анализом аспектов для нескольких продуктов"""
+    products: List[ProductAspectsResponse] = Field(..., description="Список продуктов с анализом аспектов")
+    total_products: int = Field(..., description="Общее количество продуктов")
+    filters: Dict[str, Any] = Field(default_factory=dict, description="Примененные фильтры")

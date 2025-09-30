@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
 from sqlalchemy.sql import text
 
-from .models import Product, Review, ReviewStats
+from .models import Product, Review, ReviewStats, ProductAspect
 from .schemas import ProductCreate, ReviewCreate, AnalyticsQuery
 
 
@@ -336,4 +336,98 @@ class AnalyticsCRUD:
             'positive_percentage': round(tonality_dict.get('положительно', 0) / total_reviews * 100, 1) if total_reviews > 0 else 0,
             'negative_percentage': round(tonality_dict.get('отрицательно', 0) / total_reviews * 100, 1) if total_reviews > 0 else 0,
             'neutral_percentage': round(tonality_dict.get('нейтрально', 0) / total_reviews * 100, 1) if total_reviews > 0 else 0
+        }
+
+
+class AspectsCRUD:
+    """CRUD операции для анализа аспектов продуктов"""
+    
+    @staticmethod
+    def get_product_aspects(
+        db: Session,
+        product_id: int
+    ) -> Dict[str, Any]:
+        """
+        Получить анализ аспектов для конкретного продукта
+        
+        Args:
+            db: Сессия базы данных
+            product_id: ID продукта
+            
+        Returns:
+            Dict с анализом аспектов продукта
+        """
+        # Получаем продукт
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return None
+        
+        # Получаем все аспекты продукта
+        aspects = db.query(ProductAspect).filter(
+            ProductAspect.product_id == product_id
+        ).all()
+        
+        # Разделяем на плюсы и минусы
+        pros = [aspect.aspect_text for aspect in aspects if aspect.aspect_type == 'pros']
+        cons = [aspect.aspect_text for aspect in aspects if aspect.aspect_type == 'cons']
+        
+        # Получаем среднюю оценку
+        avg_rating = aspects[0].avg_rating if aspects else None
+        
+        return {
+            'product_id': product.id,
+            'product_name': product.name,
+            'avg_rating': avg_rating,
+            'pros': pros,
+            'cons': cons,
+            'total_aspects': len(aspects)
+        }
+    
+    @staticmethod
+    def get_multiple_products_aspects(
+        db: Session,
+        product_ids: Optional[List[int]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Получить анализ аспектов для нескольких продуктов
+        
+        Args:
+            db: Сессия базы данных
+            product_ids: Список ID продуктов (если None, то все продукты)
+            
+        Returns:
+            List с анализом аспектов продуктов
+        """
+        # Формируем запрос
+        query = db.query(Product)
+        if product_ids:
+            query = query.filter(Product.id.in_(product_ids))
+        
+        products = query.all()
+        
+        results = []
+        for product in products:
+            aspects_data = AspectsCRUD.get_product_aspects(db, product.id)
+            if aspects_data:
+                results.append(aspects_data)
+        
+        return results
+    
+    @staticmethod
+    def get_all_products_aspects(db: Session) -> Dict[str, Any]:
+        """
+        Получить анализ аспектов для всех продуктов
+        
+        Args:
+            db: Сессия базы данных
+            
+        Returns:
+            Dict с полным анализом аспектов
+        """
+        products_aspects = AspectsCRUD.get_multiple_products_aspects(db)
+        
+        return {
+            'products': products_aspects,
+            'total_products': len(products_aspects),
+            'filters': {}
         }

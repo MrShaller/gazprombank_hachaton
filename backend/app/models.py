@@ -2,7 +2,7 @@
 SQLAlchemy модели для дашборда анализа отзывов Газпромбанка
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, CheckConstraint, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -18,8 +18,9 @@ class Product(Base):
     name = Column(String(100), unique=True, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Связь с отзывами
+    # Связи с отзывами и аспектами
     reviews = relationship("Review", back_populates="product")
+    aspects = relationship("ProductAspect", back_populates="product")
     
     def __repr__(self):
         return f"<Product(id={self.id}, name='{self.name}')>"
@@ -85,3 +86,30 @@ class ReviewStats(Base):
     
     def __repr__(self):
         return f"<ReviewStats(product_id={self.product_id}, date={self.date}, tonality='{self.tonality}', count={self.count})>"
+
+
+class ProductAspect(Base):
+    """Модель анализа аспектов продуктов (плюсы и минусы)"""
+    __tablename__ = "product_aspects"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    aspect_type = Column(String(10), nullable=False, index=True)  # 'pros' или 'cons'
+    aspect_text = Column(String(500), nullable=False)
+    avg_rating = Column(Float, nullable=True)  # Средняя оценка для продукта
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Ограничения
+    __table_args__ = (
+        CheckConstraint(
+            "aspect_type IN ('pros', 'cons')", 
+            name='check_aspect_type_values'
+        ),
+    )
+    
+    # Связь с продуктом
+    product = relationship("Product", back_populates="aspects")
+    
+    def __repr__(self):
+        return f"<ProductAspect(product_id={self.product_id}, type='{self.aspect_type}', text='{self.aspect_text[:50]}...')>"

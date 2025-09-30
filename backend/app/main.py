@@ -63,6 +63,10 @@ app.include_router(reviews.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(predict.router, prefix="/api/v1")
 
+# Подключаем роутер аспектов
+from .routers import aspects
+app.include_router(aspects.router, prefix="/api/v1")
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
