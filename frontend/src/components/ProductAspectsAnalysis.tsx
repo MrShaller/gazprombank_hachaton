@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle, XCircle, Star, ChevronUp, ChevronDown } from 'lucide-react';
+import { CheckCircle, XCircle, Star, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react';
 import api from '@/lib/api';
 
 interface ProductAspect {
@@ -179,9 +179,18 @@ export default function ProductAspectsAnalysis({
     <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
       {/* Заголовок */}
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-        <h3 className="text-lg font-semibold text-gray-900 text-center">
+        <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
           Анализ аспектов | Оценка сильных сторон и зон роста
         </h3>
+        <div className="text-center space-y-1">
+          <p className="text-sm text-gray-600">
+            📊 Кликните на заголовки "Продукт" и "Средняя оценка" для сортировки
+          </p>
+          <p className="text-xs text-gray-500 flex items-center justify-center space-x-1">
+            <span>🤖</span>
+            <span>Данные получены с помощью языкового моделирования</span>
+          </p>
+        </div>
       </div>
 
       {/* Таблица */}
@@ -190,36 +199,48 @@ export default function ProductAspectsAnalysis({
           <thead className="bg-gazprom-blue text-white">
             <tr>
               <th 
-                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-blue-700 transition-colors group"
                 onClick={() => handleSort('name')}
+                title="Кликните для сортировки по названию продукта"
               >
                 <div className="flex items-center justify-center space-x-1">
                   <span>Продукт</span>
-                  {sortField === 'name' && (
+                  {sortField === 'name' ? (
                     sortDirection === 'asc' ? 
                       <ChevronUp className="w-4 h-4" /> : 
                       <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
                   )}
                 </div>
               </th>
               <th 
-                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-blue-700 transition-colors group"
                 onClick={() => handleSort('rating')}
+                title="Кликните для сортировки по средней оценке"
               >
                 <div className="flex items-center justify-center space-x-1">
                   <span>Средняя оценка</span>
-                  {sortField === 'rating' && (
+                  {sortField === 'rating' ? (
                     sortDirection === 'asc' ? 
                       <ChevronUp className="w-4 h-4" /> : 
                       <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
                   )}
                 </div>
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">
-                Преимущества
+              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider relative group">
+                <div className="flex items-center justify-center space-x-1">
+                  <CheckCircle className="w-3 h-3 text-green-200" />
+                  <span>Преимущества</span>
+                </div>
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">
-                Недостатки
+              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider relative group">
+                <div className="flex items-center justify-center space-x-1">
+                  <XCircle className="w-3 h-3 text-red-200" />
+                  <span>Недостатки</span>
+                </div>
               </th>
             </tr>
           </thead>
