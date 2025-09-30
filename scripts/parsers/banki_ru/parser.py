@@ -18,8 +18,8 @@ from urllib3.util.retry import Retry
 BASE = "https://www.banki.ru"
 
 # Категория: Ипотека
-LIST_URL = "https://www.banki.ru/services/responses/bank/gazprombank/product/creditcards/?page=20&type=all"
-product_type = "Кредитные карты"
+LIST_URL = "https://www.banki.ru/services/responses/bank/gazprombank/product/debitcards/?type=all"
+product_type = "Дебетовые карты"
 
 # Куда сохранять
 RAW_DIR = "/Users/mishantique/Desktop/Projects/gazprombank_hachaton/data/raw/banki_ru"
@@ -90,8 +90,8 @@ class Review:
 class Category:
     url: str
     product_type: str
-    start_page: int = 20
-    max_pages: int = 1000
+    start_page: int = 677
+    max_pages: int = 1200
     backup_prefix: Optional[str] = None
     file_name: Optional[str] = None  # имя файла без .json
 
@@ -313,13 +313,13 @@ def parse_detail(url: str) -> Review:
 
 
 def crawl_fixed_pagination(start_url: str,
-                           start_page: int = 20,
-                           max_pages: int = 1000,
+                           start_page: int = 677,
+                           max_pages: int = 1200,
                            delay_sec: float = 2.0,
                            limit: Optional[int] = None,
                            reverse_page_order: bool = False,
                            save_every_n_pages: int = 2,
-                           backup_prefix: str = "gazprombank_creditcards",
+                           backup_prefix: str = "gazprombank_debitcards2",
                            rotate_backups: bool = True) -> List[Review]:
     """
     Идём по страницам; собираем только в диапазоне дат.
@@ -484,11 +484,11 @@ def crawl_categories(categories: List[Category],
 if __name__ == "__main__":
     categories = [
         Category(
-            url="https://www.banki.ru/services/responses/bank/gazprombank/product/creditcards/?page=20&type=all",
-            product_type="Кредитные карты",
-            start_page=20,
-            backup_prefix="gazprombank_creditcards",
-            file_name="creditcards",  # итоговый файл: creditcards.json
+            url="https://www.banki.ru/services/responses/bank/gazprombank/product/debitcards/?type=alll",
+            product_type="Дебетовые карты",
+            start_page=677,
+            backup_prefix="gazprombank_debitcards2",
+            file_name="debitcards2",  # итоговый файл: debitcards2.json
         ),
     ]
 

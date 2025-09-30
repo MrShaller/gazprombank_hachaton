@@ -220,8 +220,109 @@ class InteractiveGazprombankParser:
             logger.warning(f"Ошибка парсинга даты '{date_text}': {e}")
             return date_text
 
+    def _is_date_in_range(self, date_str: str) -> bool:
+        """Проверяет, попадает ли дата в нужный диапазон (01.01.2024 - 31.05.2025)"""
+        if not date_str:
+            return False
+        
+        try:
+            # Если дата в формате YYYY-MM-DD
+            if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            else:
+                # Пытаемся распарсить другие форматы
+                return True  # Если не можем распарсить, включаем
+                
+            start_date = datetime(2024, 1, 1)
+            end_date = datetime(2025, 5, 31)
+            
+            return start_date <= date_obj <= end_date
+            
+        except Exception as e:
+            logger.warning(f"Не удалось проверить дату {date_str}: {e}")
+            return True  # Если не можем проверить, включаем
+
+    def _extract_rating(self) -> tuple[Optional[int], Optional[str]]:
+        """Извлекает рейтинг и тональность отзыва по количеству закрашенных звёзд"""
+        try:
+            # Ищем блок с рейтингом
+            rating_selectors = [
+                "div[class*='review-card_rateStars']",
+                "div[class*='rateStars']",
+                "div[class*='rating']",
+                "span[class*='_87qanl_4czyoq_vb279g']",  # Из скриншота
+                "[data-qa='Rate']"
+            ]
+            
+            for selector in rating_selectors:
+                try:
+                    rating_blocks = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for rating_block in rating_blocks:
+                        # Ищем заполненные звёзды (с атрибутом fill="none" для пустых)
+                        filled_stars = rating_block.find_elements(By.CSS_SELECTOR, "svg path[fill='currentColor']")
+                        empty_stars = rating_block.find_elements(By.CSS_SELECTOR, "svg path[fill='none']")
+                        
+                        # Если нашли и заполненные и пустые звёзды
+                        if filled_stars or empty_stars:
+                            total_stars = len(filled_stars) + len(empty_stars)
+                            filled_count = len(filled_stars)
+                            
+                            # Проверяем, что общее количество звёзд разумное (обычно 5)
+                            if 1 <= total_stars <= 5 and 0 <= filled_count <= total_stars:
+                                rating = filled_count
+                                
+                                # Определяем тональность
+                                if rating in [1, 2]:
+                                    tonality = "отрицательно"
+                                elif rating == 3:
+                                    tonality = "нейтрально"
+                                elif rating in [4, 5]:
+                                    tonality = "положительно"
+                                else:
+                                    tonality = None
+                                    
+                                logger.info(f"Найден рейтинг: {rating}/5 звёзд, тональность: {tonality}")
+                                return rating, tonality
+                            
+                        # Альтернативный способ: по классам звёзд
+                        star_elements = rating_block.find_elements(By.CSS_SELECTOR, "svg, .star, [class*='star']")
+                        if star_elements and len(star_elements) <= 5:
+                            filled_count = 0
+                            for star in star_elements:
+                                # Проверяем различные признаки заполненной звезды
+                                if (star.get_attribute('fill') == 'currentColor' or 
+                                    'filled' in star.get_attribute('class') or
+                                    star.find_elements(By.CSS_SELECTOR, "path[fill='currentColor']")):
+                                    filled_count += 1
+                            
+                            if 0 <= filled_count <= 5:
+                                rating = filled_count
+                                
+                                if rating in [1, 2]:
+                                    tonality = "отрицательно"
+                                elif rating == 3:
+                                    tonality = "нейтрально"
+                                elif rating in [4, 5]:
+                                    tonality = "положительно"
+                                else:
+                                    tonality = None
+                                    
+                                logger.info(f"Найден рейтинг (альтернативный способ): {rating}/5 звёзд, тональность: {tonality}")
+                                return rating, tonality
+                            
+                except Exception as e:
+                    logger.debug(f"Ошибка при поиске рейтинга с селектором {selector}: {e}")
+                    continue
+            
+            logger.warning("Не удалось найти рейтинг отзыва")
+            return None, None
+            
+        except Exception as e:
+            logger.error(f"Ошибка при извлечении рейтинга: {e}")
+            return None, None
+
     def parse_single_review(self, review_url: str, product_name: str) -> Optional[Dict[str, str]]:
-        """Парсит один отзыв по URL с извлечением даты"""
+        """Парсит один отзыв по URL с извлечением даты, рейтинга и тональности"""
         try:
             logger.info(f"Парсим отзыв: {review_url}")
             self.driver.get(review_url)
@@ -302,6 +403,14 @@ class InteractiveGazprombankParser:
                 except Exception:
                     continue
             
+            # Проверяем, попадает ли дата в нужный диапазон
+            if not self._is_date_in_range(review_date):
+                logger.info(f"Отзыв с датой {review_date} не попадает в диапазон 01.01.2024 - 31.05.2025, пропускаем")
+                return None
+            
+            # Извлекаем рейтинг и тональность
+            rating, tonality = self._extract_rating()
+            
             if full_text:
                 # Минимальная очистка текста
                 cleaned_text = ' '.join(full_text.split())
@@ -313,14 +422,16 @@ class InteractiveGazprombankParser:
                     review_data = {
                         "review_id": review_id,
                         "review_text": cleaned_text,
-                        "review_date": review_date,  # Добавляем дату
+                        "review_date": review_date,
+                        "rating": rating,
+                        "tonality": tonality,
                         "url": review_url,
                         "parsed_at": datetime.now().isoformat(),
                         "bank_name": "gazprombank",
                         "product_type": product_name
                     }
                     
-                    logger.info(f"Успешно извлечен отзыв длиной {len(cleaned_text)} символов с датой {review_date} с URL {review_url}")
+                    logger.info(f"Успешно извлечен отзыв длиной {len(cleaned_text)} символов с датой {review_date}, рейтинг: {rating}, тональность: {tonality}")
                     return review_data
                 else:
                     logger.warning(f"Текст отзыва слишком короткий ({len(cleaned_text)} символов)")
@@ -333,9 +444,13 @@ class InteractiveGazprombankParser:
             return None
 
     def parse_all_reviews(self, main_url: str) -> List[Dict]:
-        """Парсит все отзывы со страницы"""
+        """Парсит все отзывы со страницы с фильтрацией по датам и извлечением рейтингов"""
         # Определяем информацию о продукте
         product_name, filename_base = self._extract_product_info(main_url)
+        
+        # Для страницы обслуживания используем специальное имя файла
+        if 'obsluzhivanie' in main_url:
+            filename_base = 'obsluzhivanie_rating'
         
         # Этап 1: Ручная прокрутка и сбор URL
         print("🔄 ЭТАП 1: СБОР URL ОТЗЫВОВ")
@@ -345,20 +460,31 @@ class InteractiveGazprombankParser:
             print("❌ Не найдено URL отзывов")
             return []
         
-        # Этап 2: Парсинг каждого отзыва
-        print(f"\n🔄 ЭТАП 2: ПАРСИНГ {len(review_urls)} ОТЗЫВОВ")
+        # Этап 2: Парсинг каждого отзыва с фильтрацией
+        print(f"\n🔄 ЭТАП 2: ПАРСИНГ {len(review_urls)} ОТЗЫВОВ С ФИЛЬТРАЦИЕЙ")
+        print("📅 Фильтр дат: 01.01.2024 - 31.05.2025")
+        print("⭐ Извлекаем рейтинги и тональность")
+        
         all_reviews = []
+        skipped_reviews = 0
         
         for i, review_url in enumerate(review_urls, 1):
             print(f"📝 Обрабатываем отзыв {i}/{len(review_urls)}")
             
             review_data = self.parse_single_review(review_url, product_name)
             if review_data:
-                review_data["review_id"] = str(i)  # Перенумеровываем
+                review_data["review_id"] = str(len(all_reviews) + 1)  # Перенумеровываем только принятые
                 all_reviews.append(review_data)
+            else:
+                skipped_reviews += 1
             
             # Пауза между запросами
             time.sleep(1)
+        
+        print(f"\n📊 РЕЗУЛЬТАТЫ ФИЛЬТРАЦИИ:")
+        print(f"   ✅ Принято отзывов: {len(all_reviews)}")
+        print(f"   ❌ Пропущено отзывов: {skipped_reviews}")
+        print(f"   📈 Процент принятых: {(len(all_reviews) / len(review_urls) * 100):.1f}%")
         
         return all_reviews, filename_base
 
@@ -432,16 +558,52 @@ def main():
                 dates_found = len([r for r in reviews if r.get('review_date')])
                 dates_percentage = (dates_found / len(reviews)) * 100
                 
+                # Анализ рейтингов
+                ratings_found = len([r for r in reviews if r.get('rating') is not None])
+                ratings_percentage = (ratings_found / len(reviews)) * 100
+                
+                # Распределение рейтингов
+                rating_distribution = {}
+                tonality_distribution = {}
+                
+                for review in reviews:
+                    rating = review.get('rating')
+                    tonality = review.get('tonality')
+                    
+                    if rating is not None:
+                        rating_distribution[rating] = rating_distribution.get(rating, 0) + 1
+                    
+                    if tonality:
+                        tonality_distribution[tonality] = tonality_distribution.get(tonality, 0) + 1
+                
                 print(f"\n📈 СТАТИСТИКА:")
                 print(f"   📏 Средняя длина отзыва: {avg_length:.0f} символов")
                 print(f"   📚 Самый длинный отзыв: {max(lengths)} символов")
                 print(f"   📄 Самый короткий отзыв: {min(lengths)} символов")
                 print(f"   📅 Найдено дат: {dates_found}/{len(reviews)} ({dates_percentage:.1f}%)")
+                print(f"   ⭐ Найдено рейтингов: {ratings_found}/{len(reviews)} ({ratings_percentage:.1f}%)")
                 
                 # Показываем примеры найденных дат
                 sample_dates = [r.get('review_date') for r in reviews[:5] if r.get('review_date')]
                 if sample_dates:
                     print(f"   📅 Примеры дат: {', '.join(sample_dates[:3])}")
+                
+                # Распределение рейтингов
+                if rating_distribution:
+                    print(f"\n⭐ РАСПРЕДЕЛЕНИЕ РЕЙТИНГОВ:")
+                    for rating in sorted(rating_distribution.keys()):
+                        count = rating_distribution[rating]
+                        percentage = (count / len(reviews)) * 100
+                        print(f"   {rating} звёзд: {count} отзывов ({percentage:.1f}%)")
+                
+                # Распределение тональности
+                if tonality_distribution:
+                    print(f"\n😊 РАСПРЕДЕЛЕНИЕ ТОНАЛЬНОСТИ:")
+                    for tonality in ['отрицательно', 'нейтрально', 'положительно']:
+                        count = tonality_distribution.get(tonality, 0)
+                        if count > 0:
+                            percentage = (count / len(reviews)) * 100
+                            print(f"   {tonality.capitalize()}: {count} отзывов ({percentage:.1f}%)")
             
             if saved_path:
                 print(f"\n💾 Результаты сохранены в: {saved_path}")
