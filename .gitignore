@@ -1,7 +1,7 @@
 # Большие файлы данных
 data/raw/**/*.json
 !data/raw/**/README.md
-
+models/xlmr/
 # Python
 __pycache__/
 *.py[cod]
