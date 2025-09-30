@@ -111,20 +111,32 @@ export default function Dashboard() {
       {/* Заголовок */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-6">
               <Image
-                src="/logo-gazprombank.png"
-                alt="Газпромбанк"
-                width={40}
-                height={40}
-                className="h-10 w-auto"
+                src="/Газпромбанк.тех.svg"
+                alt="Газпромбанк.тех"
+                width={60}
+                height={60}
+                className="h-15 w-auto"
               />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  ГАЗПРОМБАНК
+              <div className="flex flex-col space-y-1">
+                <h1 className="text-2xl font-bold tracking-wide" style={{ 
+                  background: 'linear-gradient(135deg, #005DAC 0%, #0B0A0B 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
+                  Контроль тональности
                 </h1>
-                <p className="text-sm text-gray-600">Контроль тональности</p>
+                <p className="text-lg font-medium" style={{
+                  background: 'linear-gradient(135deg, #005DAC 0%, #0B0A0B 50%, #005DAC 100%)',
+                  WebkitBackgroundClip: 'text', 
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
+                  Отзывы говорят — мы слышим
+                </p>
               </div>
             </div>
 
@@ -269,8 +281,22 @@ export default function Dashboard() {
       {/* Футер */}
       <footer className="bg-white border-t mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-sm text-gray-600">
-            © 2025 Газпромбанк. Дашборд анализа тональности отзывов клиентов.
+          <div className="flex flex-col items-center space-y-2">
+            <div className="text-center text-sm text-gray-600">
+              © 2025 Газпромбанк. Дашборд анализа тональности отзывов клиентов.
+            </div>
+            <div className="text-center text-xs text-gray-500 flex items-center space-x-1">
+              <span>Разработано командой</span>
+              <span className="font-semibold" style={{
+                background: 'linear-gradient(135deg, #005DAC 0%, #0B0A0B 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                IT's Four
+              </span>
+              <span>💻</span>
+            </div>
           </div>
         </div>
       </footer>
