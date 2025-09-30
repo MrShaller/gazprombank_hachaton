@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle, XCircle, Star, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { CheckCircle, XCircle, Star, ChevronUp, ChevronDown } from 'lucide-react';
 import api from '@/lib/api';
 
 interface ProductAspect {
@@ -179,17 +179,20 @@ export default function ProductAspectsAnalysis({
     <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
       {/* Заголовок */}
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-        <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
-          Анализ аспектов | Оценка сильных сторон и зон роста
-        </h3>
-        <div className="text-center space-y-1">
-          <p className="text-sm text-gray-600">
-            📊 Кликните на заголовки "Продукт" и "Средняя оценка" для сортировки
-          </p>
-          <p className="text-xs text-gray-500 flex items-center justify-center space-x-1">
-            <span>🤖</span>
-            <span>Данные получены с помощью языкового моделирования</span>
-          </p>
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Анализ аспектов | Оценка сильных сторон и зон роста
+          </h3>
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs text-gray-600">
+            <div className="flex items-center space-x-1">
+              <span>💡</span>
+              <span>Кликните на "Продукт" или "Средняя оценка" для сортировки</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <span>🤖</span>
+              <span>Данные получены с помощью языкового моделирования</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -210,7 +213,9 @@ export default function ProductAspectsAnalysis({
                       <ChevronUp className="w-4 h-4" /> : 
                       <ChevronDown className="w-4 h-4" />
                   ) : (
-                    <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity">
+                      <ChevronUp className="w-4 h-4" />
+                    </div>
                   )}
                 </div>
               </th>
@@ -226,21 +231,17 @@ export default function ProductAspectsAnalysis({
                       <ChevronUp className="w-4 h-4" /> : 
                       <ChevronDown className="w-4 h-4" />
                   ) : (
-                    <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity">
+                      <ChevronUp className="w-4 h-4" />
+                    </div>
                   )}
                 </div>
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider relative group">
-                <div className="flex items-center justify-center space-x-1">
-                  <CheckCircle className="w-3 h-3 text-green-200" />
-                  <span>Преимущества</span>
-                </div>
+              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">
+                Преимущества
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider relative group">
-                <div className="flex items-center justify-center space-x-1">
-                  <XCircle className="w-3 h-3 text-red-200" />
-                  <span>Недостатки</span>
-                </div>
+              <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">
+                Недостатки
               </th>
             </tr>
           </thead>

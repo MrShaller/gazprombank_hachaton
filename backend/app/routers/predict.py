@@ -6,12 +6,37 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from fastapi.responses import JSONResponse
 import json
 import logging
+import sys
+import types
 from typing import Dict, Any, List
 from pydantic import ValidationError
 
 from ..schemas import FileUploadData, PredictResponse, ErrorResponse
+from ..ml.pipeline import InferencePipeline
+from ..ml.utils import tokenize_lemma
 
 logger = logging.getLogger(__name__)
+
+# Фикс для joblib (ожидает tokenize_lemma в старом месте)
+fake_module = types.ModuleType("scripts.models.inference_pipeline")
+fake_module.tokenize_lemma = tokenize_lemma
+sys.modules["scripts.models.inference_pipeline"] = fake_module
+
+# Дополнительный фикс для __main__
+import __main__
+__main__.tokenize_lemma = tokenize_lemma
+
+# Инициализация ML пайплайна
+try:
+    logger.info("Инициализация ML пайплайна...")
+    ml_pipeline = InferencePipeline(
+        tfidf_path="../models/tfidf_lr/model.pkl",
+        xlmr_path="../models/xlmr"
+    )
+    logger.info("✅ ML пайплайн успешно инициализирован")
+except Exception as e:
+    logger.error(f"❌ Ошибка инициализации ML пайплайна: {e}")
+    ml_pipeline = None
 
 router = APIRouter(prefix="/predict", tags=["predict"])
 
@@ -155,18 +180,94 @@ async def predict_file(file: UploadFile = File(...)):
         
         logger.info(f"Получен валидный файл {file.filename} с {len(validated_data.data)} записями")
         
-        # ЗАГЛУШКА: Пока что просто возвращаем тот же файл с дополнительными полями
-        # В будущем здесь будет обработка ML моделью
-        processed_items = []
-        for item in validated_data.data:
-            processed_item = {
-                "id": item.id,
-                "text": item.text,
-                "predicted_sentiment": "положительно",  # Заглушка
-                "confidence": 0.85,  # Заглушка
-                "predicted_product": "Общий банковский продукт"  # Заглушка
-            }
-            processed_items.append(processed_item)
+        # Проверяем статус ML пайплайна
+        if ml_pipeline is None:
+            logger.warning("ML пайплайн не инициализирован")
+        else:
+            logger.info("ML пайплайн доступен, начинаем обработку")
+        
+        # Обработка ML моделями
+        if ml_pipeline is None:
+            # Fallback на заглушку, если ML пайплайн не инициализирован
+            logger.warning("ML пайплайн недоступен, используется заглушка")
+            processed_items = []
+            for item in validated_data.data:
+                processed_item = {
+                    "id": item.id,
+                    "text": item.text,
+                    "predicted_sentiment": "нейтрально",
+                    "confidence": 0.0,
+                    "predicted_products": ["Общий банковский продукт"],
+                    "error": "ML модели недоступны"
+                }
+                processed_items.append(processed_item)
+        else:
+            try:
+                # Подготавливаем данные для ML пайплайна
+                input_data = [{"id": item.id, "text": item.text} for item in validated_data.data]
+                
+                # Запускаем ML пайплайн с агрегацией
+                df_results = ml_pipeline.run_and_aggregate_from_json(input_data)
+                
+                # Обрабатываем результаты ML пайплайна
+                processed_items = []
+                for review_id in df_results['review_id'].unique():
+                    review_data = df_results[df_results['review_id'] == review_id].iloc[0]
+                    
+                    # Извлекаем предсказания BERT (тональность по продуктам)
+                    bert_predictions = review_data.get('pred_agg', {})
+                    if isinstance(bert_predictions, dict) and bert_predictions:
+                        # Берем наиболее частую тональность
+                        sentiments = list(bert_predictions.values())
+                        predicted_sentiment = max(set(sentiments), key=sentiments.count) if sentiments else "нейтрально"
+                        predicted_products = list(bert_predictions.keys())
+                        confidence = len([s for s in sentiments if s == predicted_sentiment]) / len(sentiments) if sentiments else 0.0
+                    else:
+                        predicted_sentiment = "нейтрально"
+                        predicted_products = []
+                        confidence = 0.0
+                    
+                    # Добавляем TF-IDF предсказания как дополнительные продукты
+                    tfidf_predictions = review_data.get('pred_tfidf_agg', [])
+                    if isinstance(tfidf_predictions, list):
+                        predicted_products.extend(tfidf_predictions)
+                    
+                    # Убираем дубликаты и пустые значения
+                    predicted_products = list(set([p for p in predicted_products if p and p.strip()]))
+                    if not predicted_products:
+                        predicted_products = ["Общий банковский продукт"]
+                    
+                    # Находим оригинальный текст
+                    original_item = next((item for item in validated_data.data if str(item.id) == str(review_id)), None)
+                    original_text = original_item.text if original_item else ""
+                    
+                    processed_item = {
+                        "id": int(review_id),  # Конвертируем numpy.int64 в int
+                        "text": str(original_text),
+                        "predicted_sentiment": str(predicted_sentiment),
+                        "confidence": float(round(confidence, 3)),
+                        "predicted_products": [str(p) for p in predicted_products[:5]],  # Ограничиваем до 5 продуктов
+                        "bert_details": {str(k): str(v) for k, v in bert_predictions.items()} if isinstance(bert_predictions, dict) else {},
+                        "tfidf_products": [str(p) for p in tfidf_predictions] if isinstance(tfidf_predictions, list) else []
+                    }
+                    processed_items.append(processed_item)
+                
+                logger.info(f"ML обработка завершена для {len(processed_items)} отзывов")
+                
+            except Exception as e:
+                logger.error(f"Ошибка ML обработки: {e}")
+                # Fallback на заглушку при ошибке ML
+                processed_items = []
+                for item in validated_data.data:
+                    processed_item = {
+                        "id": int(item.id) if hasattr(item.id, 'item') else item.id,
+                        "text": str(item.text),
+                        "predicted_sentiment": "нейтрально",
+                        "confidence": 0.0,
+                        "predicted_products": ["Общий банковский продукт"],
+                        "error": f"Ошибка ML обработки: {str(e)}"
+                    }
+                    processed_items.append(processed_item)
         
         response = PredictResponse(
             success=True,

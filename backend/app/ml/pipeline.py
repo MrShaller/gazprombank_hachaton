@@ -1,8 +1,11 @@
 import pandas as pd
 from collections import Counter
-from backend.app.ml.tfidf_model import TfidfClassifier
-from backend.app.ml.xlmr_model import load_pretrained, predict
-from backend.app.ml.xlmr_postprocess import postprocess
+from .tfidf_model import TfidfClassifier
+from .xlmr_model import load_pretrained, predict
+from .xlmr_postprocess import postprocess
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 from scripts.clause.splitter import split_into_clauses
 import torch
 
