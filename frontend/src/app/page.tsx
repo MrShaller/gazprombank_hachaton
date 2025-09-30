@@ -111,16 +111,18 @@ export default function Dashboard() {
       {/* Заголовок */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-24">
-            <div className="flex items-center space-x-4">
-              <Image
-                src="/Газпромбанк.тех.svg"
-                alt="Газпромбанк.тех"
-                width={820}
-                height={242}
-                style={{ height: '80px', width: '270px', objectFit: 'contain' }}
-              />
-              <div className="flex flex-col">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-6">
+              <div className="relative overflow-hidden h-16 w-96 flex items-center justify-center">
+                <Image
+                  src="/Газпромбанк.тех.svg"
+                  alt="Газпромбанк.тех"
+                  width={800}
+                  height={800}
+                  className="absolute scale-[0.8] translate-x-0 translate-y-1 object-contain"
+                />
+              </div>
+              <div className="flex flex-col justify-center">
                 <h1 className="text-2xl font-bold tracking-wide leading-tight" style={{ 
                   background: 'linear-gradient(135deg, #005DAC 0%, #0B0A0B 100%)',
                   WebkitBackgroundClip: 'text',
@@ -129,7 +131,7 @@ export default function Dashboard() {
                 }}>
                   Контроль тональности
                 </h1>
-                <p className="text-lg font-medium leading-tight" style={{
+                <p className="text-base font-medium leading-tight" style={{
                   background: 'linear-gradient(135deg, #005DAC 0%, #0B0A0B 50%, #005DAC 100%)',
                   WebkitBackgroundClip: 'text', 
                   WebkitTextFillColor: 'transparent',
