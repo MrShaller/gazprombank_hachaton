@@ -12,16 +12,33 @@ import type { ProductStats } from '@/types/api';
 interface ProductsBarChartProps {
   products: ProductStats[];
   className?: string;
-  maxProducts?: number;
 }
 
 export default function ProductsBarChart({
   products,
   className = '',
-  maxProducts = 10,
 }: ProductsBarChartProps) {
   const [selectedTonality, setSelectedTonality] = useState<string>('all');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Маппинг сокращенных названий продуктов для лучшего отображения в диаграмме
+  const getShortProductName = (fullName: string): string => {
+    const shortNames: { [key: string]: string } = {
+      'Дебетовые карты': 'Д. карты',
+      'Кредитные карты': 'Кр. карты', 
+      'Дистанционное обслуживание': 'Дист. обсл.',
+      'Вклады': 'Вклады',
+      'Другое': 'Другое',
+      'Переводы': 'Переводы',
+      'Мобильное приложение': 'Прилож.',
+      'Кредиты': 'Кредиты',
+      'Ипотека': 'Ипотека',
+      'Автокредиты': 'Автокр.',
+      'Рефинансирование': 'Рефин.',
+    };
+    
+    return shortNames[fullName] || truncateText(fullName, 10);
+  };
 
   // Опции тональности
   const tonalityOptions = [
@@ -50,13 +67,12 @@ export default function ProductsBarChart({
     return tonality === 'all' ? 100 : (value / product.total_reviews) * 100;
   };
 
-  // Подготовка данных для диаграммы
+  // Подготовка данных для диаграммы - показываем все продукты
   const chartData = products
     .filter(product => product.total_reviews > 0)
     .sort((a, b) => getTonalityValue(b, selectedTonality) - getTonalityValue(a, selectedTonality))
-    .slice(0, maxProducts)
     .map(product => ({
-      name: truncateText(product.name, 15),
+      name: getShortProductName(product.name),
       fullName: product.name,
       value: selectedTonality === 'all' ? getTonalityValue(product, selectedTonality) : getTonalityPercentage(product, selectedTonality),
       absoluteValue: getTonalityValue(product, selectedTonality),
@@ -132,7 +148,7 @@ export default function ProductsBarChart({
         <text 
           x={0} 
           y={0} 
-          dy={16} 
+          dy={20} 
           textAnchor="middle" 
           fill="#6b7280" 
           fontSize="12"
@@ -219,14 +235,14 @@ export default function ProductsBarChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="name"
               tick={<CustomXAxisTick />}
               interval={0}
-              height={60}
+              height={80}
             />
             <YAxis 
               tick={{ fontSize: 12 }}
@@ -256,14 +272,6 @@ export default function ProductsBarChart({
         </div>
       )}
 
-      {/* Информация о количестве продуктов */}
-      {products.length > maxProducts && (
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
-            Показано топ-{maxProducts} продуктов из {products.length}
-          </p>
-        </div>
-      )}
 
     </div>
   );

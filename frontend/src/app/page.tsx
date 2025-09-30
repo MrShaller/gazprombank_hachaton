@@ -247,7 +247,6 @@ export default function Dashboard() {
             {productsStats ? (
               <ProductsBarChart
                 products={productsStats.products}
-                maxProducts={10}
               />
             ) : (
               <div className="bg-white rounded-lg p-6 h-96 flex items-center justify-center">
