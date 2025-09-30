@@ -3,6 +3,7 @@ from collections import Counter
 from backend.app.ml.tfidf_model import TfidfClassifier
 from backend.app.ml.xlmr_model import load_pretrained, predict
 from backend.app.ml.xlmr_postprocess import postprocess
+from scripts.clause.splitter import split_into_clauses
 import torch
 
 
@@ -48,6 +49,28 @@ class InferencePipeline:
         self.tfidf = TfidfClassifier(tfidf_path)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.tok, self.mdl, self.cfg = load_pretrained(xlmr_path, self.device)
+
+    def preprocess_json(self, data: list[dict]) -> pd.DataFrame:
+        rows = []
+        for rec in data:
+            text = rec.get("text", "")
+            review_id = rec.get("id")
+            clauses = split_into_clauses(text) or [text.strip()]
+            for i, cl in enumerate(clauses):
+                rows.append({
+                    "review_id": review_id,
+                    "clause_id": i,
+                    "clause": cl.strip()
+                })
+        return pd.DataFrame(rows)
+    
+    def run_from_json(self, data: list[dict]) -> pd.DataFrame:
+        df = self.preprocess_json(data)
+        return self.run(df)
+
+    def run_and_aggregate_from_json(self, data: list[dict]) -> pd.DataFrame:
+        df = self.preprocess_json(data)
+        return self.run_and_aggregate(df)
 
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
         # TF-IDF
