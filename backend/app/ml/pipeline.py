@@ -72,8 +72,55 @@ class InferencePipeline:
         return self.run(df)
 
     def run_and_aggregate_from_json(self, data: list[dict]) -> pd.DataFrame:
+        """
+        Принимаем список словарей [{"id": ..., "text": ...}, ...]
+        Возвращаем агрегированный результат по каждому отзыву
+        """
+        # сохраняем оригинальные тексты для объединения
+        reviews = pd.DataFrame(data).rename(columns={"id": "review_id"})
+
+        # режем на клаузы
         df = self.preprocess_json(data)
-        return self.run_and_aggregate(df)
+
+        # запускаем инференс
+        merged = self.run(df)
+
+        # --- агрегируем BERT ---
+        agg_rows = []
+        for rid, group in merged.groupby("review_id"):
+            topic_sentiments = {}
+            for _, row in group.iterrows():
+                for topic, sent in parse_pred_bert(row["pred_bert"]):
+                    topic_sentiments.setdefault(topic, []).append(sent)
+            agg = {topic: aggregate_sentiments(sents) for topic, sents in topic_sentiments.items()}
+            agg_rows.append({"review_id": rid, "pred_agg": agg})
+        agg_df = pd.DataFrame(agg_rows)
+
+        # --- агрегируем TF-IDF ---
+        agg_rows_tfidf = []
+        for rid, group in merged.groupby("review_id"):
+            all_topics = []
+            for _, row in group.iterrows():
+                all_topics.extend(parse_pred_tfidf(row["pred_tfidf"]))
+            agg_rows_tfidf.append({
+                "review_id": rid,
+                "pred_tfidf_agg": sorted(set(all_topics))
+            })
+        agg_tfidf_df = pd.DataFrame(agg_rows_tfidf)
+
+        # --- объединяем с исходными текстами ---
+        final = pd.merge(reviews, agg_df, on="review_id", how="left")
+        final = pd.merge(final, agg_tfidf_df, on="review_id", how="left")
+
+        # --- находим extra topics ---
+        #def find_extra_topics_row(row):
+        #    bert_topics = set(row["pred_agg"].keys()) if isinstance(row["pred_agg"], dict) else set()
+        #    tfidf_topics = set(row["pred_tfidf_agg"]) if isinstance(row["pred_tfidf_agg"], list) else set()
+        #    return list(tfidf_topics - bert_topics)
+
+        #final["extra"] = final.apply(find_extra_topics_row, axis=1)
+
+        return final
 
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
         # TF-IDF
