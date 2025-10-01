@@ -20,6 +20,37 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
   const [error, setError] = useState<string | null>(null);
   const [processedItemsCount, setProcessedItemsCount] = useState(0);
   const [totalItemsCount, setTotalItemsCount] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Форматирование времени
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0) {
+      return `${mins}м ${secs}с`;
+    }
+    return `${secs}с`;
+  };
+
+  // Эффект для обновления таймера
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (isUploading && startTime) {
+      interval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        setElapsedTime(elapsed);
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isUploading, startTime]);
 
   // Обработка выбора файла
   const handleFileSelect = useCallback((file: File) => {
@@ -70,13 +101,17 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
   const simulateUploadProgress = () => {
     const interval = setInterval(() => {
       setUploadProgress(prev => {
-        if (prev >= 90) {
+        if (prev >= 95) {
           clearInterval(interval);
-          return 90; // Останавливаемся на 90%, ждем ответа сервера
+          return 95; // Останавливаемся на 95%, ждем ответа сервера
         }
-        return prev + Math.floor(Math.random() * 5) + 2;
+        // Замедляем прогресс по мере приближения к концу
+        const increment = prev < 50 ? Math.floor(Math.random() * 8) + 3 : 
+                         prev < 80 ? Math.floor(Math.random() * 4) + 2 : 
+                         Math.floor(Math.random() * 2) + 1;
+        return Math.min(prev + increment, 95);
       });
-    }, 300);
+    }, 200);
     return interval;
   };
 
@@ -107,6 +142,8 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
     setError(null);
     setUploadProgress(0);
     setUploadStage('uploading');
+    setStartTime(Date.now());
+    setElapsedTime(0);
 
     let uploadInterval: NodeJS.Timeout | null = null;
     let processingInterval: NodeJS.Timeout | null = null;
@@ -124,15 +161,21 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
       setUploadStage('uploading');
       uploadInterval = simulateUploadProgress();
 
+      // Запускаем запрос
       const response = await fetch('/api/v1/predict/', {
         method: 'POST',
         body: formData,
       });
 
-      // Останавливаем симуляцию загрузки
+      // Останавливаем симуляцию загрузки и переходим к обработке
       if (uploadInterval) {
         clearInterval(uploadInterval);
       }
+      
+      setUploadProgress(100); // Завершаем этап загрузки
+      
+      // Небольшая пауза для визуального эффекта
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -141,12 +184,12 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
 
       // Этап 2: Обработка ML моделями
       setUploadStage('processing');
-      setUploadProgress(15);
+      setUploadProgress(10);
       
       // Симулируем прогресс обработки
       processingInterval = simulateProcessingProgress(itemsCount);
 
-      // Постепенно увеличиваем общий прогресс во время обработки
+      // Постепенно увеличиваем общий прогресс во время получения данных
       const processingProgressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 85) {
@@ -155,9 +198,9 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
           }
           return prev + Math.floor(Math.random() * 3) + 1;
         });
-      }, 500);
+      }, 300);
 
-      // Этап 3: Получение результата
+      // Получаем результат (это может занять время для больших файлов)
       const blob = await response.blob();
       
       // Останавливаем все интервалы
@@ -213,6 +256,8 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
     setUploadStage('idle');
     setProcessedItemsCount(0);
     setTotalItemsCount(0);
+    setStartTime(null);
+    setElapsedTime(0);
     onClose();
   };
 
@@ -347,7 +392,14 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
                   {uploadStage === 'downloading' && 'Формирование результата...'}
                   {uploadStage === 'complete' && 'Анализ завершен!'}
                 </span>
-                <span className="text-sm text-gray-500">{Math.round(uploadProgress)}%</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">{Math.round(uploadProgress)}%</span>
+                  {isUploading && elapsedTime > 0 && (
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                      ⏱️ {formatTime(elapsedTime)}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
@@ -368,11 +420,23 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
                     <p className="text-sm font-medium text-blue-800">
                       🤖 Анализ тональности отзывов
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Обработано {processedItemsCount} из {totalItemsCount} отзывов
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-blue-600">
+                        Обработано {processedItemsCount} из {totalItemsCount} отзывов
+                      </p>
+                      {elapsedTime > 0 && (
+                        <span className="text-xs text-blue-400 bg-blue-100 px-2 py-0.5 rounded">
+                          {formatTime(elapsedTime)}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-blue-500 mt-1">
                       TF-IDF классификация продуктов • XLM-RoBERTa анализ тональности
+                      {elapsedTime > 0 && processedItemsCount > 0 && (
+                        <span className="ml-2">
+                          • ~{Math.round(processedItemsCount / elapsedTime)} отз/сек
+                        </span>
+                      )}
                     </p>
                     <div className="mt-2 w-full bg-blue-200 rounded-full h-1.5">
                       <div 
@@ -392,11 +456,16 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
                   <Loader2 className="w-5 h-5 text-gray-600 animate-spin" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-800">
-                      📤 Отправка данных на сервер
+                      {uploadProgress < 95 ? '📤 Отправка данных на сервер' : '⏳ Ожидание ответа сервера'}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
                       Файл: {selectedFile?.name} ({((selectedFile?.size || 0) / 1024 / 1024).toFixed(2)} МБ)
                     </p>
+                    {uploadProgress >= 95 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Сервер обрабатывает запрос...
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -428,9 +497,16 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
                     <p className="text-sm font-medium text-green-800">
                       ✅ Анализ тональности завершен!
                     </p>
-                    <p className="text-xs text-green-600 mt-1">
-                      Обработано {totalItemsCount} отзывов • Результат скачивается автоматически
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-green-600">
+                        Обработано {totalItemsCount} отзывов • Результат скачивается автоматически
+                      </p>
+                      {elapsedTime > 0 && (
+                        <span className="text-xs text-green-500 bg-green-100 px-2 py-0.5 rounded font-medium">
+                          🎯 {formatTime(elapsedTime)}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-green-500 mt-1">
                       Окно закроется через несколько секунд
                     </p>
