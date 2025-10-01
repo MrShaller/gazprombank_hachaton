@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 import json
 import logging
 import sys
+import os
 import types
 from typing import Dict, Any, List
 from pydantic import ValidationError
@@ -29,9 +30,17 @@ __main__.tokenize_lemma = tokenize_lemma
 # Инициализация ML пайплайна
 try:
     logger.info("Инициализация ML пайплайна...")
+    # Определяем корневую папку проекта
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+    tfidf_model_path = os.path.join(project_root, "models/tfidf_lr/model.pkl")
+    xlmr_model_path = os.path.join(project_root, "models/xlmr")
+    
+    logger.info(f"Путь к TF-IDF модели: {tfidf_model_path}")
+    logger.info(f"Путь к XLM-R модели: {xlmr_model_path}")
+    
     ml_pipeline = InferencePipeline(
-        tfidf_path="../models/tfidf_lr/model.pkl",
-        xlmr_path="../models/xlmr"
+        tfidf_path=tfidf_model_path,
+        xlmr_path=xlmr_model_path
     )
     logger.info("✅ ML пайплайн успешно инициализирован")
 except Exception as e:

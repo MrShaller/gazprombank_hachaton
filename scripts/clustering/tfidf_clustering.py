@@ -76,7 +76,7 @@ class TfIdfClustering:
         }
         self.stop_words.update(banking_stopwords)
         
-    def load_data(self, max_samples=30000):
+    def load_data(self, max_samples=40000):
         """Загрузка данных из JSON файла с ограничением размера выборки"""
         print("Загружаем данные...")
         with open(self.data_path, 'r', encoding='utf-8') as f:
