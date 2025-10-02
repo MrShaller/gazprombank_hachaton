@@ -7,6 +7,7 @@ import sys
 import os
 import time
 import logging
+import re
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 from scripts.clause.splitter import split_into_clauses
 import torch
@@ -49,6 +50,160 @@ def parse_pred_tfidf(pred_str):
     if not isinstance(pred_str, str):
         return []
     return [t.strip() for t in pred_str.split(",") if t.strip()]
+
+
+# --- Доп. правила обогащения тем TF-IDF и назначение тональности ---
+def is_money_transfer_context(text: str) -> bool:
+    text = text.lower()
+    sentences = re.split(r"[.,!?]", text)
+    for sent in sentences:
+        sent = sent.strip()
+        if "деньг" in sent and re.search(r"\bперев\w*", sent):
+            return True
+    return False
+
+
+def is_debit_card_context(text: str) -> bool:
+    text = text.lower()
+    # исключаем кредитки
+    if re.search(r"кредитн\w*\s+карт", text):
+        return False
+    # исключаем контекст переводов/СБП
+    transfer_bad = [
+        "сбп", "система быстрых платежей", "перевод", "перевела",
+        "перевел", "перевести", "операция не прошла", "деньги не дошли", "не поступил"
+    ]
+    if any(tb in text for tb in transfer_bad):
+        return False
+    # прямые упоминания получения карты
+    if re.search(r"(привез\w*|достав\w*|оформ\w*|выпуст\w*|получил\w*|получить готовую)\s+карт", text):
+        return True
+    # карта + название банка
+    if re.search(r"карт\w*\s+(газпром|сбер|тинькоф|втб|альфа|росбанк)", text):
+        return True
+    # явное упоминание дебетовой
+    if re.search(r"дебетов\w*\s+карт", text):
+        return True
+    tokens = text.split()
+    for i, tok in enumerate(tokens):
+        if tok.startswith("карт"):
+            left = tokens[max(0, i - 2):i]
+            right = tokens[i + 1:i + 3]
+            context = " ".join(left + right)
+            bad_words = ["перевел", "перевела", "перевести", "снять", "снял", "сняла", "деньги", "на", "с"]
+            if any(bad in context for bad in bad_words):
+                return False
+            good_words = [
+                "дебетова", "сберкарта", "пластиковая", "зарплатная", "газпромбанк",
+                "заблокир", "разблокир", "лимит", "одобр", "закрыл", "открыл",
+                "привез", "достав", "оформ", "выпуст", "получил"
+            ]
+            if any(good in text for good in good_words):
+                return True
+            if "карты были" in text or "карты заблокированы" in text:
+                return True
+    return False
+
+
+RULES = {
+    "Автокредит": {"include": ["автокредит", "кредит на машину", "машина в кредит"], "exclude": []},
+    "Вклады": {"include": ["вклад", "вклады", "вклада", "накопительный счет"], "exclude": []},
+    "Дебетовая карта": {
+        "include": ["карта", "карты", "карта газпромбанка"],
+        "exclude": ["кредитная карта", "кредит", "кредитную карту"],
+        "custom": "is_debit_card_context",
+    },
+    "Другое": {
+        "include": [
+            "кэшбек", "баллы", "бонус", "сертификат", "акция", "подарок", "зарплатный клиент",
+            "премиум клиент", "обмен валют"
+        ],
+        "exclude": [],
+    },
+    "Потребительский кредит": {
+        "include": [
+            "потребительский кредит", "кредит наличными", "взял кредит", "оформил кредит",
+            "потребкредит", "при оформлении кредита", "о кредите", "кредиторов", "кредитор",
+            "кредиторы", "график платежей"
+        ],
+        "exclude": ["ипотек", "автокредит", "машин", "льготный период", "минимальный платеж", "кредитная карта"],
+    },
+    "Ипотека": {"include": ["ипотечному кредитованию", "ипотечное кредитование", "ипотека"], "exclude": []},
+    "Денежные переводы": {"include": [], "exclude": [], "custom": "is_money_transfer_context"},
+    "Рефинансирование кредитов": {
+        "include": [
+            "рефинансирование", "рефинансирован", "рефинансирование кредита", "рефинансировать кредит",
+            "объединение кредитов", "перекредитоваться", "новый кредит для погашения старого"
+        ],
+        "exclude": [],
+    },
+    "Обслуживание": {
+        "include": [
+            "приехала вовремя", "приехал вовремя", "курьер привезла карту", "курьер привез карту",
+            "при визите в банк", "отвратительный сервис", "обслуживание в офисе"
+        ],
+        "exclude": [],
+    },
+    "Дистанционное обслуживание": {
+        "include": [
+            "обратилась в чат", "провисев на линии", "в чате другой консультант", "уточнил в техподдержке",
+            "в техподдержке сказали", "обратились в поддержку", "пообщался с оператором", "позвонила в газпром",
+            "на горячей линии", "в службу поддержки", "в службе поддержки", "в контактный центр",
+            "позвонила в банк", "соединили с оператором", "но оператор", "возразить в чате", "звонил в газпромбанк",
+            "в чате оператор", "по телефону"
+        ],
+        "exclude": [],
+    },
+}
+
+
+def choose_sentiment_for_new_topic(bert_agg: dict) -> str:
+    """Назначить тональность новой теме на основе общей картины BERT.
+    Логика: если есть только одна полярность — её и берём; при смешении положит./отрицат. → нейтрально.
+    При отсутствии — нейтрально.
+    """
+    if not isinstance(bert_agg, dict) or not bert_agg:
+        return "нейтрально"
+    sentiments = list(bert_agg.values())
+    return aggregate_sentiments(sentiments)
+
+
+def apply_rules_to_row(row) -> dict:
+    text = str(row.get("text", ""))
+    bert_agg = row.get("pred_agg") or {}
+    tfidf_topics = set(row.get("pred_tfidf_agg") or [])
+    bert_topics = set(bert_agg.keys()) if isinstance(bert_agg, dict) else set()
+    extra_topics = tfidf_topics - bert_topics
+
+    new_classes = {}
+    already_has_credit = "Кредитная карта" in bert_topics
+    already_has_refi_or_credit = any(cls in bert_topics for cls in ["Рефинансирование кредитов", "Кредитная карта"])
+
+    for cls, rule in RULES.items():
+        if cls not in extra_topics:
+            continue
+        # защита от конфликтов
+        if cls == "Дебетовая карта" and already_has_credit:
+            continue
+        if cls == "Потребительский кредит" and already_has_refi_or_credit:
+            continue
+        passed = False
+        if "custom" in rule:
+            if rule["custom"] == "is_debit_card_context" and is_debit_card_context(text):
+                passed = True
+            if rule["custom"] == "is_money_transfer_context" and is_money_transfer_context(text):
+                passed = True
+        else:
+            low = text.lower()
+            ok_include = any(kw in low for kw in rule.get("include", [])) if rule.get("include") else False
+            ok_exclude = all(kw not in low for kw in rule.get("exclude", [])) if rule.get("exclude") else True
+            passed = ok_include and ok_exclude
+        if passed:
+            new_classes[cls] = choose_sentiment_for_new_topic(bert_agg)
+
+    updated = dict(bert_agg) if isinstance(bert_agg, dict) else {}
+    updated.update(new_classes)
+    return updated
 
 
 class InferencePipeline:
@@ -128,8 +283,14 @@ class InferencePipeline:
         agg_tfidf_df = pd.DataFrame(agg_rows_tfidf)
 
         # --- объединяем с исходными текстами ---
-        final = pd.merge(reviews, agg_df, on="review_id", how="left")
+        final = pd.merge(reviews.rename(columns={"text": "text"}), agg_df, on="review_id", how="left")
         final = pd.merge(final, agg_tfidf_df, on="review_id", how="left")
+
+        # --- применяем правила к новым темам из TF-IDF ---
+        t_rules = time.time()
+        final["pred_agg_rules"] = final.apply(lambda r: apply_rules_to_row(r), axis=1)
+        final["added_by_rules"] = final.apply(lambda r: list(set((r.get("pred_agg_rules") or {}).keys()) - set((r.get("pred_agg") or {}).keys() if isinstance(r.get("pred_agg"), dict) else set())), axis=1)
+        logger.info(f"[PIPELINE] rules applied in {time.time() - t_rules:.3f}s")
 
         # --- находим extra topics ---
         #def find_extra_topics_row(row):
