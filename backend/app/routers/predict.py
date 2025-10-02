@@ -32,25 +32,20 @@ sys.modules["scripts.models.inference_pipeline"] = fake_module
 import __main__
 __main__.tokenize_lemma = tokenize_lemma
 
-# Инициализация ML пайплайна
-try:
-    logger.info("Инициализация ML пайплайна...")
-    # Определяем корневую папку проекта
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-    tfidf_model_path = os.path.join(project_root, "models/tfidf_lr/model.pkl")
-    xlmr_model_path = os.path.join(project_root, "models/xlmr")
-    
-    logger.info(f"Путь к TF-IDF модели: {tfidf_model_path}")
-    logger.info(f"Путь к XLM-R модели: {xlmr_model_path}")
-    
-    ml_pipeline = InferencePipeline(
-        tfidf_path=MODELS_DIR / "tfidf_lr/model.pkl",
-        xlmr_path=MODELS_DIR / "xlmr"
-    )
-    logger.info("✅ ML пайплайн успешно инициализирован")
-except Exception as e:
-    logger.error(f"❌ Ошибка инициализации ML пайплайна: {e}")
-    ml_pipeline = None
+def get_pipeline():
+    global ml_pipeline
+    if ml_pipeline is None:
+        logger.info("⚡ Первый запуск: загружаем ML пайплайн...")
+        try:
+            ml_pipeline = InferencePipeline(
+                tfidf_path=MODELS_DIR / "tfidf_lr/model.pkl",
+                xlmr_path=MODELS_DIR / "xlmr"
+            )
+            logger.info("✅ ML пайплайн загружен")
+        except Exception as e:
+            logger.error(f"❌ Ошибка инициализации ML пайплайна: {e}")
+            ml_pipeline = None
+    return ml_pipeline
 
 router = APIRouter(prefix="/predict", tags=["predict"])
 
