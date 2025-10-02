@@ -257,7 +257,7 @@ curl "http://localhost:8000/api/v1/analytics/dynamics?interval=month"
 curl "http://localhost:8000/api/v1/analytics/top-reviews?tonality=положительно&limit=5"
 
 # Анализ тональности - получить файл с результатами (production)
-curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
+curl -X POST "http://itsfour-solution.ru/api/v1/predict" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@example_reviews.json;type=application/json" \
   -o "results.json"
@@ -299,18 +299,13 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/json" \
       "id": 2,
       "topics": ["Кредитная карта"],
       "sentiments": ["нейтрально"]
+    },
+    {
+      "id": 3,
+      "topics": ["Обслуживание"],
+      "sentiments": ["отрицательно"]
     }
-  ],
-  "metadata": {
-    "processed_at": "2025-01-02T15:30:45.123456",
-    "total_items": 2,
-    "source_file": "example_reviews.json",
-    "model_info": {
-      "tfidf_model": "Logistic Regression + TF-IDF",
-      "sentiment_model": "XLM-RoBERTa Large",
-      "version": "1.0"
-    }
-  }
+  ]
 }
 ```
 
@@ -323,7 +318,7 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
   -d '{"data": [{"id": 1, "text": "Отзыв"}]}'
 
 # ПРАВИЛЬНО - загрузка файла
-curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
+curl -X POST "http://itsfour-solution.ru/api/v1/predict" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@example_reviews.json;type=application/json"
 ```
@@ -343,7 +338,7 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
 
 #### Получить файл с результатами:
 ```bash
-curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
+curl -X POST "http://itsfour-solution.ru/api/v1/predict" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@ваш_файл.json;type=application/json" \
   -o "результаты.json"

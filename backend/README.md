@@ -241,7 +241,7 @@ curl http://localhost:8000/api/v1/products/stats
 curl "http://localhost:8000/api/v1/analytics/tonality?product_id=1"
 
 # Тестирование ML API - получить файл с результатами
-curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
+curl -X POST "http://itsfour-solution.ru/api/v1/predict" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@example_reviews.json;type=application/json" \
   -o "results.json"
@@ -266,6 +266,11 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/json" \
       "id": 2,
       "topics": ["Кредитная карта"],
       "sentiments": ["нейтрально"]
+    },
+    {
+      "id": 3,
+      "topics": ["Обслуживание"],
+      "sentiments": ["отрицательно"]
     }
   ]
 }
@@ -276,7 +281,8 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/json" \
 #### ✅ Правильное использование:
 ```bash
 # Загрузка файла через multipart/form-data
-curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
+curl -X POST "http://itsfour-solution.ru/api/v1/predict" \
+  -H "Content-Type: multipart/form-data" \
   -F "file=@example_reviews.json;type=application/json"
 ```
 

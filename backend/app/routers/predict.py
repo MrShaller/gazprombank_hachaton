@@ -383,20 +383,8 @@ async def predict_file(file: UploadFile = File(...)):
                 "sentiments": sentiments
             })
 
-        # Создаем результирующий JSON
-        result = {
-            "predictions": predictions,
-            "metadata": {
-                "processed_at": datetime.now().isoformat(),
-                "total_items": len(predictions),
-                "source_file": file.filename,
-                "model_info": {
-                    "tfidf_model": "Logistic Regression + TF-IDF",
-                    "sentiment_model": "XLM-RoBERTa Large",
-                    "version": "1.0"
-                }
-            }
-        }
+        # Создаем результирующий JSON (только predictions)
+        result = {"predictions": predictions}
         
         # Создаем имя файла для скачивания
         original_name = file.filename.rsplit('.', 1)[0] if file.filename else "predictions"
