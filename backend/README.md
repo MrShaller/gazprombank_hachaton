@@ -228,7 +228,7 @@ fastapi dev app/main.py
 ### Служебные
 - `GET /` - информация об API
 - `GET /health` - проверка здоровья
-- `GET /api/v1/health` - проверка здоровья API
+- `GET /api/v1/health` - проверка здоровья API и статуса ML моделей
 
 ## 🧪 Тестирование API
 
@@ -237,6 +237,7 @@ fastapi dev app/main.py
 python test_api.py
 
 # Ручное тестирование
+curl http://localhost:8000/api/v1/health
 curl http://localhost:8000/api/v1/products/stats
 curl "http://localhost:8000/api/v1/analytics/tonality?product_id=1"
 

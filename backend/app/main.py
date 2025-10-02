@@ -11,6 +11,7 @@ import traceback
 from .config import settings
 from .database import create_tables
 from .routers import products, reviews, analytics, predict, aspects
+from .routers.predict import get_pipeline
 
 # Настройка логирования
 logging.basicConfig(
@@ -78,6 +79,18 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Ошибка при инициализации базы данных: {e}")
         raise
+    
+    # Инициализация ML пайплайна при старте приложения
+    logger.info("Инициализация ML моделей...")
+    try:
+        pipeline = get_pipeline()
+        if pipeline is not None:
+            logger.info("✅ ML модели успешно загружены при старте приложения")
+        else:
+            logger.warning("⚠️ ML модели не удалось загрузить, будет использоваться fallback")
+    except Exception as e:
+        logger.error(f"❌ Ошибка при загрузке ML моделей: {e}")
+        logger.info("Приложение продолжит работу без ML моделей (fallback режим)")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -97,10 +110,14 @@ async def root():
 # Healthcheck
 @app.get("/api/v1/health", tags=["health"])
 async def api_health_check():
+    # Проверяем статус ML моделей
+    ml_status = "loaded" if get_pipeline() is not None else "fallback"
+    
     return {
         "status": "healthy",
         "version": settings.app_version,
         "database": "connected",
+        "ml_models": ml_status,
         "api": "v1"
     }
 
