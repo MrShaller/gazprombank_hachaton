@@ -71,6 +71,31 @@ async def predict_file(file: UploadFile = File(...)):
     Возвращает структурированный ответ с результатом обработки или ошибками
     """
     try:
+        # Проверяем, что действительно загружен файл, а не текст
+        if not file.filename:
+            error_response = ErrorResponse(
+                message="Необходимо загрузить файл, а не отправлять текст в теле запроса",
+                error_code="NO_FILE_UPLOADED",
+                details={
+                    "explanation": "Этот endpoint ожидает файл в формате multipart/form-data",
+                    "correct_usage": "curl -X POST 'http://itsfour-solution.ru/api/v1/predict/' -F 'file=@reviews.json'",
+                    "file_format": {
+                        "required_format": "JSON",
+                        "structure": {
+                            "data": [
+                                {"id": 1, "text": "Текст отзыва для анализа"},
+                                {"id": 2, "text": "Еще один отзыв"}
+                            ]
+                        }
+                    },
+                    "note": "Убедитесь, что вы загружаете файл с помощью параметра 'file=@filename.json'"
+                }
+            )
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response.dict()
+            )
+        
         # Проверяем тип файла
         if not file.content_type or "json" not in file.content_type.lower():
             error_response = ErrorResponse(
@@ -89,6 +114,25 @@ async def predict_file(file: UploadFile = File(...)):
                 message="Размер файла превышает максимально допустимый (10 МБ)",
                 error_code="FILE_TOO_LARGE",
                 details={"size_mb": round(file.size / 1024 / 1024, 2), "max_size_mb": 10}
+            )
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response.dict()
+            )
+        
+        # Дополнительная проверка на случай отправки текста вместо файла
+        if file.size and file.size < 10:  # Слишком маленький размер может указывать на текст
+            error_response = ErrorResponse(
+                message="Файл слишком мал или содержит недостаточно данных",
+                error_code="FILE_TOO_SMALL",
+                details={
+                    "size_bytes": file.size,
+                    "explanation": "Возможно, вы отправляете текст вместо файла",
+                    "correct_usage": "curl -X POST 'http://itsfour-solution.ru/api/v1/predict/' -F 'file=@reviews.json'",
+                    "minimum_file_structure": {
+                        "data": [{"id": 1, "text": "Минимальный пример отзыва"}]
+                    }
+                }
             )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -124,13 +168,26 @@ async def predict_file(file: UploadFile = File(...)):
             raw_data = json.loads(content.decode('utf-8'))
         except json.JSONDecodeError as e:
             error_response = ErrorResponse(
-                message="Ошибка парсинга JSON файла",
+                message="Ошибка парсинга JSON файла - возможно, вы отправили текст вместо файла",
                 error_code="INVALID_JSON",
                 details={
                     "error": str(e),
                     "line": getattr(e, 'lineno', None),
                     "column": getattr(e, 'colno', None),
-                    "filename": file.filename
+                    "filename": file.filename,
+                    "explanation": "Убедитесь, что вы загружаете корректный JSON файл, а не отправляете текст в теле запроса",
+                    "correct_usage": "curl -X POST 'http://itsfour-solution.ru/api/v1/predict/' -F 'file=@reviews.json'",
+                    "required_json_structure": {
+                        "data": [
+                            {"id": 1, "text": "Текст первого отзыва"},
+                            {"id": 2, "text": "Текст второго отзыва"}
+                        ]
+                    },
+                    "common_mistakes": [
+                        "Отправка текста в теле запроса вместо файла",
+                        "Использование неправильного Content-Type",
+                        "Некорректный JSON синтаксис в файле"
+                    ]
                 }
             )
             return JSONResponse(
