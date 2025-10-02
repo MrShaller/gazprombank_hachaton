@@ -33,8 +33,8 @@ services:
     volumes:
       - ./data:/app/data:ro       # данные для ETL
       - ./models:/app/models:ro   # веса моделей
-    ports:
-      - "8000:8000"
+    #ports:
+    #  - "8000:8000"
     networks:
       - gazprombank_network
     depends_on:
@@ -54,19 +54,51 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
+        NEXT_PUBLIC_API_URL: https://itsfour-solution.ru/api/v1
     container_name: gazprombank_frontend
     env_file:
       - ./frontend/.env.docker
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
-    ports:
-      - "3000:3000"
+      NEXT_PUBLIC_API_URL: https://itsfour-solution.ru/api/v1
+    #ports:
+    #  - "3000:3000"
     networks:
       - gazprombank_network
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:latest
+    container_name: gazprombank_nginx
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - gazprombank_network
+    restart: unless-stopped
+  
+  # Certbot для SSL
+  certbot:
+    image: certbot/certbot
+    container_name: gazprombank_certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
+    networks:
+      - gazprombank_network
     restart: unless-stopped
 
   # ETL сервис (запускается один раз для загрузки данных)
@@ -90,6 +122,8 @@ services:
 volumes:
   postgres_data:
     driver: local
+  certbot-etc:
+  certbot-var:
 
 networks:
   gazprombank_network:
