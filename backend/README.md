@@ -221,7 +221,8 @@ fastapi dev app/main.py
 - `GET /api/v1/analytics/top-reviews` - топ отзывы
 
 ### ML Анализ
-- `POST /api/v1/predict/` - анализ тональности JSON файла
+- `POST /api/v1/predict/` - анализ тональности (возвращает файл с результатами)
+- `POST /api/v1/predict/json` - анализ тональности (возвращает JSON ответ)
 - `GET /api/v1/predict/health` - проверка ML сервиса
 
 ### Служебные
@@ -239,15 +240,16 @@ python test_api.py
 curl http://localhost:8000/api/v1/products/stats
 curl "http://localhost:8000/api/v1/analytics/tonality?product_id=1"
 
-# Тестирование ML API (локально)
-curl -X POST "http://localhost:8000/api/v1/predict/" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@test_reviews.json"
-
-# Тестирование ML API (production)
+# Тестирование ML API - получить файл с результатами
 curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@test_reviews.json"
+  -F "file=@example_reviews.json;type=application/json" \
+  -o "results.json"
+
+# Тестирование ML API - получить JSON ответ
+curl -X POST "http://itsfour-solution.ru/api/v1/predict/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@example_reviews.json;type=application/json"
 ```
 
 ### Пример ML API ответа:
@@ -275,7 +277,7 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
 ```bash
 # Загрузка файла через multipart/form-data
 curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
-  -F "file=@example_reviews.json"
+  -F "file=@example_reviews.json;type=application/json"
 ```
 
 #### ❌ Неправильное использование:

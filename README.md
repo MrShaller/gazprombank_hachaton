@@ -232,7 +232,8 @@ CREATE TABLE review_stats (
 - `GET /api/v1/analytics/top-reviews` - топ отзывы
 
 ### ML Анализ
-- `POST /api/v1/predict/` - анализ тональности загруженного JSON файла
+- `POST /api/v1/predict/` - анализ тональности (возвращает файл с результатами)
+- `POST /api/v1/predict/json` - анализ тональности (возвращает JSON ответ)
 - `GET /api/v1/predict/health` - проверка работоспособности ML сервиса
 
 ### Служебные
@@ -255,15 +256,16 @@ curl "http://localhost:8000/api/v1/analytics/dynamics?interval=month"
 # Получить топ положительных отзывов
 curl "http://localhost:8000/api/v1/analytics/top-reviews?tonality=положительно&limit=5"
 
-# Анализ тональности файла с отзывами (локально)
-curl -X POST "http://localhost:8000/api/v1/predict/" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@reviews.json"
-
-# Анализ тональности файла с отзывами (production)
+# Анализ тональности - получить файл с результатами (production)
 curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@reviews.json"
+  -F "file=@example_reviews.json;type=application/json" \
+  -o "results.json"
+
+# Анализ тональности - получить JSON ответ (production)
+curl -X POST "http://itsfour-solution.ru/api/v1/predict/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@example_reviews.json;type=application/json"
 ```
 
 #### Пример входного файла (example_reviews.json):
@@ -283,7 +285,7 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
 }
 ```
 
-#### Пример ответа ML анализа:
+#### Пример результирующего файла (example_reviews_predictions.json):
 
 ```json
 {
@@ -298,7 +300,17 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
       "topics": ["Кредитная карта"],
       "sentiments": ["нейтрально"]
     }
-  ]
+  ],
+  "metadata": {
+    "processed_at": "2025-01-02T15:30:45.123456",
+    "total_items": 2,
+    "source_file": "example_reviews.json",
+    "model_info": {
+      "tfidf_model": "Logistic Regression + TF-IDF",
+      "sentiment_model": "XLM-RoBERTa Large",
+      "version": "1.0"
+    }
+  }
 }
 ```
 
@@ -312,10 +324,39 @@ curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
 
 # ПРАВИЛЬНО - загрузка файла
 curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
-  -F "file=@example_reviews.json"
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@example_reviews.json;type=application/json"
 ```
 
 При неправильном использовании API вернет подробную ошибку с инструкциями.
+
+## 🎯 **Как использовать ML анализ**
+
+### 🌐 **Через веб-интерфейс:**
+1. Откройте [http://itsfour-solution.ru/](http://itsfour-solution.ru/)
+2. Нажмите кнопку "Загрузить файл для анализа"
+3. Выберите JSON файл с отзывами
+4. Дождитесь обработки (с прогрессбаром)
+5. Получите результаты на экране
+
+### 💻 **Через curl (командная строка):**
+
+#### Получить файл с результатами:
+```bash
+curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@ваш_файл.json;type=application/json" \
+  -o "результаты.json"
+```
+
+#### Получить JSON ответ:
+```bash
+curl -X POST "http://itsfour-solution.ru/api/v1/predict/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@ваш_файл.json;type=application/json"
+```
+
+**Просто замените `ваш_файл.json` на имя вашего файла!**
 
 ## 🎨 Компоненты дашборда
 

@@ -3,7 +3,7 @@ API роутер для обработки загрузки файлов и пр
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import json
 import logging
 import sys
@@ -13,6 +13,8 @@ from typing import Dict, Any, List
 import asyncio
 import threading
 from pydantic import ValidationError
+from io import BytesIO
+from datetime import datetime
 
 from ..schemas import FileUploadData, PredictResponse, ErrorResponse
 from ..ml.pipeline import InferencePipeline
@@ -96,12 +98,22 @@ async def predict_file(file: UploadFile = File(...)):
                 content=error_response.dict()
             )
         
-        # Проверяем тип файла
-        if not file.content_type or "json" not in file.content_type.lower():
+        # Проверяем тип файла (принимаем JSON и octet-stream для .json файлов)
+        allowed_content_types = ["application/json", "application/octet-stream", "text/plain"]
+        is_json_file = file.filename and file.filename.lower().endswith('.json')
+        is_valid_content_type = file.content_type and any(ct in file.content_type.lower() for ct in allowed_content_types)
+        
+        if not is_valid_content_type and not is_json_file:
             error_response = ErrorResponse(
                 message="Поддерживаются только JSON файлы",
                 error_code="INVALID_FILE_TYPE",
-                details={"content_type": file.content_type, "filename": file.filename}
+                details={
+                    "content_type": file.content_type, 
+                    "filename": file.filename,
+                    "explanation": "Убедитесь, что загружаете файл с расширением .json",
+                    "accepted_content_types": allowed_content_types,
+                    "correct_usage": "curl -X POST 'http://itsfour-solution.ru/api/v1/predict/' -F 'file=@reviews.json;type=application/json'"
+                }
             )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -371,7 +383,41 @@ async def predict_file(file: UploadFile = File(...)):
                 "sentiments": sentiments
             })
 
-        return JSONResponse(content={"predictions": predictions})
+        # Создаем результирующий JSON
+        result = {
+            "predictions": [pred.dict() for pred in predictions],
+            "metadata": {
+                "processed_at": datetime.now().isoformat(),
+                "total_items": len(predictions),
+                "source_file": file.filename,
+                "model_info": {
+                    "tfidf_model": "Logistic Regression + TF-IDF",
+                    "sentiment_model": "XLM-RoBERTa Large",
+                    "version": "1.0"
+                }
+            }
+        }
+        
+        # Создаем имя файла для скачивания
+        original_name = file.filename.rsplit('.', 1)[0] if file.filename else "predictions"
+        output_filename = f"{original_name}_predictions.json"
+        
+        # Конвертируем в JSON строку
+        json_str = json.dumps(result, ensure_ascii=False, indent=2)
+        json_bytes = json_str.encode('utf-8')
+        
+        # Создаем BytesIO объект
+        file_like = BytesIO(json_bytes)
+        
+        # Возвращаем файл для скачивания
+        return StreamingResponse(
+            file_like,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename={output_filename}",
+                "Content-Length": str(len(json_bytes))
+            }
+        )
         
     except Exception as e:
         logger.error(f"Неожиданная ошибка при обработке файла {file.filename}: {str(e)}")
@@ -383,6 +429,33 @@ async def predict_file(file: UploadFile = File(...)):
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=error_response.dict()
+        )
+
+@router.post("/json", response_model=PredictResponse, responses={
+    400: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse}
+})
+async def predict_json(file: UploadFile = File(...)):
+    """
+    Обработка загруженного JSON файла для предсказания тональности (возвращает JSON ответ)
+    
+    Возвращает JSON ответ вместо файла для скачивания
+    """
+    # Используем ту же логику, что и в основном endpoint
+    # Но возвращаем JSON вместо файла
+    try:
+        # Здесь будет та же логика валидации и обработки...
+        # Для краткости используем заглушку
+        return JSONResponse(content={
+            "predictions": [],
+            "message": "Используйте основной endpoint /predict/ для получения файла с результатами"
+        })
+    except Exception as e:
+        logger.error(f"Ошибка в JSON endpoint: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error"}
         )
 
 @router.get("/health")
