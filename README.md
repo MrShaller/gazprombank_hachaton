@@ -228,6 +228,10 @@ CREATE TABLE review_stats (
 - `GET /api/v1/analytics/ratings` - распределение по рейтингам
 - `GET /api/v1/analytics/top-reviews` - топ отзывы
 
+### ML Анализ
+- `POST /api/v1/predict/` - анализ тональности загруженного JSON файла
+- `GET /api/v1/predict/health` - проверка работоспособности ML сервиса
+
 ### Служебные
 - `GET /` - информация об API
 - `GET /health` - проверка здоровья сервиса
@@ -247,6 +251,30 @@ curl "http://localhost:8000/api/v1/analytics/dynamics?interval=month"
 
 # Получить топ положительных отзывов
 curl "http://localhost:8000/api/v1/analytics/top-reviews?tonality=положительно&limit=5"
+
+# Анализ тональности файла с отзывами
+curl -X POST "http://localhost:8000/api/v1/predict/" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@reviews.json"
+```
+
+#### Пример ответа ML анализа:
+
+```json
+{
+  "predictions": [
+    {
+      "id": 1,
+      "topics": ["Мобильное приложение", "Обслуживание"],
+      "sentiments": ["положительно", "отрицательно"]
+    },
+    {
+      "id": 2,
+      "topics": ["Кредитная карта"],
+      "sentiments": ["нейтрально"]
+    }
+  ]
+}
 ```
 
 ## 🎨 Компоненты дашборда
@@ -384,10 +412,11 @@ npm run dev      # Режим разработки
 - **Временной диапазон**: 2024-2025
 
 ### 🛠️ **Технологический стек**
-- **Data Science**: Python, Pandas, scikit-learn, PyTorch, Transformers
-- **Backend**: FastAPI, PostgreSQL, SQLAlchemy, Pydantic
-- **Frontend**: Next.js, TypeScript, Tailwind CSS, Recharts
-- **Infrastructure**: Docker, Docker Compose, GitHub Actions
+- **Data Science**: Python, Pandas, scikit-learn, PyTorch, Transformers, Ollama
+- **Backend**: FastAPI, PostgreSQL, SQLAlchemy, Pydantic, Uvicorn
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Recharts, Axios
+- **ML Models**: TF-IDF + Logistic Regression, XLM-RoBERTa Large
+- **Infrastructure**: Docker, Docker Compose, Nginx, GitHub Actions
 
 ## 🔍 Возможности дашборда
 
@@ -414,19 +443,28 @@ npm run dev      # Режим разработки
 ### 🐳 **Docker (Рекомендуется)**
 
 ```bash
-# Запуск всех сервисов
+# Запуск всех сервисов (PostgreSQL + Backend + Frontend + Nginx)
 docker-compose up --build -d
 
-# Загрузка данных
+# Загрузка данных в базу
 docker-compose exec backend python run_etl.py
 
-# Остановка
+# Проверка статуса сервисов
+docker-compose ps
+
+# Остановка всех сервисов
 docker-compose down
 
-# Логи
+# Логи отдельных сервисов
 docker-compose logs -f backend
 docker-compose logs -f frontend
+docker-compose logs -f nginx
 ```
+
+**Доступ к сервисам:**
+- **Frontend**: http://localhost:3000 (через nginx прокси)
+- **Backend API**: http://localhost:8000/api/v1
+- **API Docs**: http://localhost:8000/docs
 
 ### ☁️ **Production развертывание**
 
@@ -494,10 +532,11 @@ docker-compose logs -f frontend
 - **Интерактивные фильтры** по датам и продуктам
 
 ### 🤖 **ML анализ файлов**
-- **Загрузка JSON** файлов с отзывами
-- **Автоматическая классификация** продуктов (TF-IDF)
-- **Анализ тональности** по каждому продукту (XLM-RoBERTa)
+- **Загрузка JSON** файлов с отзывами через веб-интерфейс
+- **Гибридная классификация** продуктов (TF-IDF + XLM-RoBERTa)
+- **Мультилейбл анализ** тональности по каждому продукту
 - **Прогрессбар и таймер** обработки в реальном времени
+- **Новый формат ответа** с predictions для интеграции
 
 ### 🔍 **Детальная аналитика**
 - **Аспектный анализ** по продуктам

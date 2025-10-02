@@ -8,6 +8,9 @@ Backend для дашборда анализа клиентских отзыво
 
 ```bash
 cd backend
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# или venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
@@ -213,10 +216,14 @@ fastapi dev app/main.py
 - `GET /api/v1/analytics/ratings` - распределение по рейтингам
 - `GET /api/v1/analytics/top-reviews` - топ отзывы
 
+### ML Анализ
+- `POST /api/v1/predict/` - анализ тональности JSON файла
+- `GET /api/v1/predict/health` - проверка ML сервиса
+
 ### Служебные
 - `GET /` - информация об API
 - `GET /health` - проверка здоровья
-- `GET /api/v1/info` - детали API
+- `GET /api/v1/health` - проверка здоровья API
 
 ## 🧪 Тестирование API
 
@@ -227,6 +234,30 @@ python test_api.py
 # Ручное тестирование
 curl http://localhost:8000/api/v1/products/stats
 curl "http://localhost:8000/api/v1/analytics/tonality?product_id=1"
+
+# Тестирование ML API
+curl -X POST "http://localhost:8000/api/v1/predict/" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@test_reviews.json"
+```
+
+### Пример ML API ответа:
+
+```json
+{
+  "predictions": [
+    {
+      "id": 1,
+      "topics": ["Мобильное приложение", "Обслуживание"],
+      "sentiments": ["положительно", "отрицательно"]
+    },
+    {
+      "id": 2,
+      "topics": ["Кредитная карта"],
+      "sentiments": ["нейтрально"]
+    }
+  ]
+}
 ```
 
 ## 📈 Следующие шаги
