@@ -88,21 +88,6 @@ services:
       - gazprombank_network
     restart: unless-stopped
 
-  # Certbot для SSL
-  certbot:
-    image: certbot/certbot
-    container_name: gazprombank_certbot
-    volumes:
-      - certbot-etc:/etc/letsencrypt
-      - certbot-var:/var/lib/letsencrypt
-      - certbot-webroot:/var/www/certbot
-      - ./nginx/conf.d:/etc/nginx/conf.d
-    entrypoint: >
-      sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
-    networks:
-      - gazprombank_network
-    restart: unless-stopped
-
   # ETL сервис (запускается один раз для загрузки данных)
   etl:
     build:

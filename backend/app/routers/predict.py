@@ -10,6 +10,8 @@ import sys
 import os
 import types
 from typing import Dict, Any, List
+import asyncio
+import threading
 from pydantic import ValidationError
 
 from ..schemas import FileUploadData, PredictResponse, ErrorResponse
@@ -17,8 +19,11 @@ from ..ml.pipeline import InferencePipeline
 from ..ml.utils import tokenize_lemma
 from pathlib import Path
 import os
+import time
 
 MODELS_DIR = Path(os.getenv("MODELS_PATH", "/app/models"))
+ml_pipeline = None  # глобальная ссылка на ML пайплайн
+_pipeline_lock = threading.Lock()
 
 
 logger = logging.getLogger(__name__)
@@ -32,22 +37,28 @@ sys.modules["scripts.models.inference_pipeline"] = fake_module
 import __main__
 __main__.tokenize_lemma = tokenize_lemma
 
-def get_pipeline():
+def get_pipeline() -> InferencePipeline | None:
     global ml_pipeline
-    if ml_pipeline is None:
-        logger.info("⚡ Первый запуск: загружаем ML пайплайн...")
+    if ml_pipeline is not None:
+        return ml_pipeline
+    # Потокобезопасная одноразовая инициализация
+    with _pipeline_lock:
+        if ml_pipeline is not None:
+            return ml_pipeline
         try:
-            ml_pipeline = InferencePipeline(
+            logger.info("Инициализация ML пайплайна...")
+            ml_pipeline_local = InferencePipeline(
                 tfidf_path=MODELS_DIR / "tfidf_lr/model.pkl",
                 xlmr_path=MODELS_DIR / "xlmr"
             )
-            logger.info("✅ ML пайплайн загружен")
+            ml_pipeline = ml_pipeline_local
+            logger.info("✅ ML пайплайн успешно инициализирован")
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации ML пайплайна: {e}")
             ml_pipeline = None
-    return ml_pipeline
+        return ml_pipeline
 
-router = APIRouter(prefix="/predict", tags=["predict"])
+router = APIRouter(tags=["predict"])
 
 @router.post("", response_model=PredictResponse, responses={
     400: {"model": ErrorResponse},
@@ -189,14 +200,15 @@ async def predict_file(file: UploadFile = File(...)):
         
         logger.info(f"Получен валидный файл {file.filename} с {len(validated_data.data)} записями")
         
-        # Проверяем статус ML пайплайна
-        if ml_pipeline is None:
-            logger.warning("ML пайплайн не инициализирован")
+        # Инициализируем/получаем ML пайплайн
+        pipeline = get_pipeline()
+        if pipeline is None:
+            logger.warning("ML пайплайн не инициализирован, будет использоваться заглушка")
         else:
             logger.info("ML пайплайн доступен, начинаем обработку")
         
         # Обработка ML моделями
-        if ml_pipeline is None:
+        if pipeline is None:
             # Fallback на заглушку, если ML пайплайн не инициализирован
             logger.warning("ML пайплайн недоступен, используется заглушка")
             processed_items = []
@@ -215,8 +227,12 @@ async def predict_file(file: UploadFile = File(...)):
                 # Подготавливаем данные для ML пайплайна
                 input_data = [{"id": item.id, "text": item.text} for item in validated_data.data]
                 
-                # Запускаем ML пайплайн с агрегацией
-                df_results = ml_pipeline.run_and_aggregate_from_json(input_data)
+                # Запускаем ML пайплайн с агрегацией в пуле потоков (не блокируем event loop)
+                loop = asyncio.get_running_loop()
+                t0 = time.time()
+                logger.info(f"[PREDICT] run_and_aggregate_from_json start, items={len(input_data)}")
+                df_results = await loop.run_in_executor(None, pipeline.run_and_aggregate_from_json, input_data)
+                logger.info(f"[PREDICT] run_and_aggregate_from_json done in {time.time() - t0:.3f}s")
                 
                 # Обрабатываем результаты ML пайплайна
                 processed_items = []

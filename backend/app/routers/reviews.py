@@ -10,8 +10,7 @@ from ..database import get_db
 from ..crud import ReviewCRUD
 from ..schemas import Review
 
-router = APIRouter(prefix="/reviews", tags=["reviews"])
-
+router = APIRouter(tags=["reviews"])
 
 @router.get("/", response_model=List[Review])
 def get_reviews(
