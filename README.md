@@ -5,7 +5,7 @@
 ## 🌐 **Живая демонстрация**
 **🚀 [Попробовать систему в действии →](http://itsfour-solution.ru/)**
 
-![Дашборд](logo-gazprombank.png)
+![Дашборд](docs/images/logo-gazprombank.png)
 
 ## 🎯 О проекте
 
