@@ -125,13 +125,15 @@ class FileUploadData(BaseModel):
     """Структура данных загружаемого файла"""
     data: List[FileUploadItem] = Field(..., min_items=1, description="Массив данных для обработки")
 
+class PredictionItem(BaseModel):
+    """Элемент предсказания"""
+    id: Union[int, str] = Field(..., description="ID записи")
+    topics: List[str] = Field(..., description="Список определенных тем/продуктов")
+    sentiments: List[str] = Field(..., description="Список тональностей для каждой темы")
+
 class PredictResponse(BaseModel):
     """Ответ сервиса предсказаний"""
-    success: bool = Field(..., description="Статус выполнения операции")
-    message: str = Field(..., description="Сообщение о результате операции")
-    data: Optional[List[Dict[str, Any]]] = Field(None, description="Обработанные данные")
-    total_items: Optional[int] = Field(None, description="Количество обработанных элементов")
-    errors: Optional[List[str]] = Field(None, description="Список ошибок валидации")
+    predictions: List[PredictionItem] = Field(..., description="Список предсказаний")
 
 class ErrorResponse(BaseModel):
     """Ответ с ошибкой"""

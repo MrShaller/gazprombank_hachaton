@@ -5,9 +5,13 @@ from .xlmr_model import load_pretrained, predict
 from .xlmr_postprocess import postprocess
 import sys
 import os
+import time
+import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 from scripts.clause.splitter import split_into_clauses
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 def parse_pred_bert(pred_str):
@@ -49,9 +53,20 @@ def parse_pred_tfidf(pred_str):
 
 class InferencePipeline:
     def __init__(self, tfidf_path: str, xlmr_path: str, device=None):
+        logger.info(f"[PIPELINE] start")
+        t0 = time.time()
+        logger.info(f"[PIPELINE] Init start | tfidf_path={tfidf_path} xlmr_path={xlmr_path}")
+        # TF-IDF load
+        t_load_tfidf = time.time()
         self.tfidf = TfidfClassifier(tfidf_path)
+        logger.info(f"[PIPELINE] TF-IDF loaded in {time.time() - t_load_tfidf:.3f}s")
+
+        # XLM-R load
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        t_load_xlmr = time.time()
         self.tok, self.mdl, self.cfg = load_pretrained(xlmr_path, self.device)
+        logger.info(f"[PIPELINE] XLM-R loaded on {self.device} in {time.time() - t_load_xlmr:.3f}s")
+        logger.info(f"[PIPELINE] Init done in {time.time() - t0:.3f}s")
 
     def preprocess_json(self, data: list[dict]) -> pd.DataFrame:
         rows = []
@@ -80,10 +95,14 @@ class InferencePipeline:
         reviews = pd.DataFrame(data).rename(columns={"id": "review_id"})
 
         # режем на клаузы
+        t_prep = time.time()
         df = self.preprocess_json(data)
+        logger.info(f"[PIPELINE] Preprocess: {len(df)} clauses from {len(reviews)} reviews in {time.time() - t_prep:.3f}s")
 
         # запускаем инференс
+        t_run = time.time()
         merged = self.run(df)
+        logger.info(f"[PIPELINE] run() produced {len(merged)} rows in {time.time() - t_run:.3f}s")
 
         # --- агрегируем BERT ---
         agg_rows = []
@@ -124,10 +143,15 @@ class InferencePipeline:
 
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
         # TF-IDF
+        t_tfidf = time.time()
+        logger.info(f"[PIPELINE] TF-IDF start on {len(df)} clauses")
         tfidf_res = self.tfidf.predict_dataframe(df, text_col="clause")
         tfidf_res = tfidf_res.rename(columns={"pred": "pred_tfidf"})
+        logger.info(f"[PIPELINE] TF-IDF done in {time.time() - t_tfidf:.3f}s")
 
         # XLM-R
+        t_xlmr = time.time()
+        logger.info(f"[PIPELINE] XLM-R start on {len(df)} clauses (max_len={self.cfg.get('max_len', 128)})")
         preds, probs = predict(
             df["clause"].astype(str).tolist(),
             self.tok,
@@ -135,8 +159,11 @@ class InferencePipeline:
             max_len=self.cfg.get("max_len", 128),
             device=self.device
         )
+        logger.info(f"[PIPELINE] XLM-R predict done in {time.time() - t_xlmr:.3f}s")
+        t_post = time.time()
         xlmr_res = postprocess(preds, probs, df, self.cfg["classes"], self.cfg["id2sent"], tau=0.5)
         xlmr_res = xlmr_res.rename(columns={"pred_pairs": "pred_bert"})
+        logger.info(f"[PIPELINE] XLM-R postprocess done in {time.time() - t_post:.3f}s")
 
         # объединение по review_id + clause_id
         merged = pd.merge(

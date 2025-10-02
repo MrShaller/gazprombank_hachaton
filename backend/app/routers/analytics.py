@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import AnalyticsCRUD
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(tags=["analytics"])
 
 def parse_date(date_str: Optional[str]) -> Optional[datetime]:
     """Парсинг даты из строки в формате YYYY-MM-DD"""

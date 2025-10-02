@@ -9,7 +9,7 @@ from ..database import get_db
 from ..crud import AspectsCRUD
 from ..schemas import ProductAspectsResponse, ProductsAspectsResponse
 
-router = APIRouter(prefix="/aspects", tags=["aspects"])
+router = APIRouter(tags=["aspects"])
 
 
 @router.get("/product/{product_id}", response_model=ProductAspectsResponse)
