@@ -162,7 +162,7 @@ export default function FileUploadModal({ isOpen, onClose }: FileUploadModalProp
       uploadInterval = simulateUploadProgress();
 
       // Запускаем запрос
-      const response = await fetch('/api/v1/predict/', {
+      const response = await fetch('/api/v1/predict', {
         method: 'POST',
         body: formData,
       });

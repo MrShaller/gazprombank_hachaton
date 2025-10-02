@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    API_URL: process.env.API_URL || 'http://localhost:8000/api/v1',
-  },
   images: {
     remotePatterns: [
       {
@@ -15,11 +12,10 @@ const nextConfig = {
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'http://localhost:8000/api/v1/:path*',
+        destination: 'http://backend:8000/api/v1/:path*', // внутри docker → backend
       },
-    ];
+    ]
   },
-  // Для Docker standalone сборки
   output: 'standalone',
 };
 

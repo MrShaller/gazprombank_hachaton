@@ -12,10 +12,18 @@ class Settings(BaseSettings):
     # База данных
     database_url: str = "postgresql://postgres:postgres@localhost:5432/gazprombank_reviews"
     
+    # Дополнительные CORS origins
+    additional_cors_origins: str = ""
+
+    # Пагинация
+    default_page_size: int = 50
+    max_page_size: int = 1000
+
+    # Данные
+    data_path: str = "/app/data/raw"
+
     @property
     def database_connection_url(self) -> str:
-        """Динамический URL базы данных в зависимости от окружения"""
-        # Приоритет: переменная окружения -> настройка по умолчанию
         return os.getenv("DATABASE_URL", self.database_url)
     
     # FastAPI
@@ -23,48 +31,37 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     debug: bool = False
     
-    # CORS - настройки для разработки и продакшена
+    # CORS - настройки
     environment: str = "development"  # development, staging, production
     
     @property
     def allowed_origins(self) -> list:
-        """Динамические CORS origins в зависимости от окружения"""
         base_origins = []
         
         if self.environment == "development":
             base_origins.extend([
                 "http://localhost:3000",
-                "http://127.0.0.1:3000", 
-                "http://localhost:3001",
-                "http://127.0.0.1:3001",
-                "null"  # Для локальных файлов и тестирования
+                "http://127.0.0.1:3000",
+                "null"
             ])
         elif self.environment == "staging":
             base_origins.extend([
                 "https://gazprombank-dashboard-staging.vercel.app",
                 "https://gazprombank-dashboard-staging.herokuapp.com",
-                # Добавьте staging домены
             ])
         elif self.environment == "production":
             base_origins.extend([
                 "https://gazprombank-dashboard.vercel.app",
                 "https://gazprombank-dashboard.herokuapp.com",
-                # Добавьте продакшен домены
             ])
         
-        # Дополнительные origins из переменной окружения
-        env_origins = os.getenv("ADDITIONAL_CORS_ORIGINS", "")
-        if env_origins:
-            base_origins.extend([origin.strip() for origin in env_origins.split(",")])
-            
+        # Поддержка .env ADDITIONAL_CORS_ORIGINS
+        if self.additional_cors_origins:
+            base_origins.extend([
+                origin.strip() for origin in self.additional_cors_origins.split(",")
+            ])
+        
         return base_origins
-    
-    # Пагинация
-    default_page_size: int = 50
-    max_page_size: int = 1000
-    
-    # Данные
-    data_path: str = "/app/data/raw/banki_ru"  # Путь внутри Docker контейнера
     
     class Config:
         env_file = ".env"
@@ -72,4 +69,6 @@ class Settings(BaseSettings):
 
 
 # Глобальный экземпляр настроек
+print("ENV VARS:", {k: v for k, v in os.environ.items() if "CORS" in k})
 settings = Settings()
+print("✅ Allowed origins:", settings.allowed_origins)

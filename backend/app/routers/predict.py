@@ -15,6 +15,11 @@ from pydantic import ValidationError
 from ..schemas import FileUploadData, PredictResponse, ErrorResponse
 from ..ml.pipeline import InferencePipeline
 from ..ml.utils import tokenize_lemma
+from pathlib import Path
+import os
+
+MODELS_DIR = Path(os.getenv("MODELS_PATH", "/app/models"))
+
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +44,8 @@ try:
     logger.info(f"Путь к XLM-R модели: {xlmr_model_path}")
     
     ml_pipeline = InferencePipeline(
-        tfidf_path=tfidf_model_path,
-        xlmr_path=xlmr_model_path
+        tfidf_path=MODELS_DIR / "tfidf_lr/model.pkl",
+        xlmr_path=MODELS_DIR / "xlmr"
     )
     logger.info("✅ ML пайплайн успешно инициализирован")
 except Exception as e:
@@ -49,7 +54,7 @@ except Exception as e:
 
 router = APIRouter(prefix="/predict", tags=["predict"])
 
-@router.post("/", response_model=PredictResponse, responses={
+@router.post("", response_model=PredictResponse, responses={
     400: {"model": ErrorResponse},
     422: {"model": ErrorResponse},
     500: {"model": ErrorResponse}

@@ -206,6 +206,8 @@ class ReviewETL:
         Returns:
             int: Количество загруженных отзывов
         """
+        # Подстраховка: создадим таблицы, если их ещё нет
+        self.create_tables()
         logger.info(f"Загрузка данных из файла: {json_file_path}")
         
         try:
@@ -441,13 +443,16 @@ class ReviewETL:
 
 
 def main():
-    """Основная функция для запуска ETL"""
-    # Путь к данным (можно передать как аргумент командной строки)
+    # 1. Путь к данным можно передать как аргумент командной строки
     if len(sys.argv) > 1:
         data_path = sys.argv[1]
+    # 2. Или через переменную окружения
+    elif os.getenv("DATA_PATH"):
+        data_path = os.getenv("DATA_PATH")
     else:
-        # Используем путь из проекта
-        data_path = "/Users/mishantique/Desktop/Projects/gazprombank_hachaton/data/raw/banki_ru"
+        # 3. По умолчанию используем ../data/raw/all_reviews.json
+        current_dir = Path(__file__).resolve().parent
+        data_path = current_dir.parent.parent / "data" / "raw" / "all_reviews.json"
     
     # URL базы данных (можно передать как переменную окружения)
     database_url = os.getenv(
@@ -461,15 +466,23 @@ def main():
     
     # Создание и запуск ETL
     etl = ReviewETL(database_url)
-    stats = etl.load_all_json_files(data_path)
+    #stats = etl.load_all_json_files(data_path)
+    loaded_count = etl.load_reviews_from_json(data_path)
     
-    # Возвращаем код выхода на основе результатов
-    if stats['errors'] > 0:
-        logger.error("ETL завершился с ошибками")
-        sys.exit(1)
+    # Если путь — директория, грузим все JSON файлы
+    if Path(data_path).is_dir():
+        stats = etl.load_all_json_files(str(data_path))
+        success = stats["reviews_loaded"] > 0 and stats["errors"] == 0
     else:
-        logger.info("ETL успешно завершен")
+        loaded_count = etl.load_reviews_from_json(str(data_path))
+        success = loaded_count > 0 and etl.stats["errors"] == 0
+
+    if success:
+        logger.info("✅ ETL успешно завершен")
         sys.exit(0)
+    else:
+        logger.error("❌ ETL завершился с ошибками")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

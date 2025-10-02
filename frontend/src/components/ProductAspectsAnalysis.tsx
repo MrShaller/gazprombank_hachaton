@@ -123,18 +123,19 @@ export default function ProductAspectsAnalysis({
   // Сортированные аспекты
   const sortedAspects = useMemo(() => {
     if (!sortField) return aspects;
-    
+
     return [...aspects].sort((a, b) => {
-      let valueA, valueB;
-      
+      let valueA: string | number = 0;
+      let valueB: string | number = 0;
+
       if (sortField === 'name') {
-        valueA = a.product_name.toLowerCase();
-        valueB = b.product_name.toLowerCase();
+        valueA = a.product_name?.toLowerCase?.() || "";
+        valueB = b.product_name?.toLowerCase?.() || "";
       } else if (sortField === 'rating') {
-        valueA = a.avg_rating || 0;
-        valueB = b.avg_rating || 0;
+        valueA = a.avg_rating ?? 0;
+        valueB = b.avg_rating ?? 0;
       }
-      
+
       if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
       if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
