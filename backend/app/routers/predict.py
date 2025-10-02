@@ -14,7 +14,7 @@ import asyncio
 import threading
 from pydantic import ValidationError
 
-from ..schemas import FileUploadData, PredictResponse, ErrorResponse
+from ..schemas import FileUploadData, PredictResponse, ErrorResponse, PredictionItem
 from ..ml.pipeline import InferencePipeline
 from ..ml.utils import tokenize_lemma
 from pathlib import Path
@@ -200,7 +200,7 @@ async def predict_file(file: UploadFile = File(...)):
         
         logger.info(f"Получен валидный файл {file.filename} с {len(validated_data.data)} записями")
         
-        processed_items = []
+        predictions = []
 
         # Инициализируем/получаем ML пайплайн
         pipeline = get_pipeline()
@@ -209,25 +209,23 @@ async def predict_file(file: UploadFile = File(...)):
         else:
             logger.info("ML пайплайн доступен, начинаем обработку")
         
-        if pipeline is None:
+        if ml_pipeline is None:
             # Fallback на заглушку, если ML пайплайн не инициализирован
             logger.warning("ML пайплайн недоступен, используется заглушка")
             for item in validated_data.data:
-                processed_items.append({
-                    "id": item.id,
-                    "text": item.text,
-                    "predicted_sentiment": "нейтрально",
-                    "confidence": 0.0,
-                    "predicted_products": ["Общий банковский продукт"],
-                    "error": "ML модели недоступны"
-                })
+                prediction = PredictionItem(
+                    id=item.id,
+                    topics=["Общий банковский продукт"],
+                    sentiments=["нейтрально"]
+                )
+                predictions.append(prediction)
         else:
             try:
                 # Подготавливаем данные для ML пайплайна
                 input_data = [{"id": item.id, "text": item.text} for item in validated_data.data]
                 
                 # Запускаем ML пайплайн с агрегацией
-                df_results = pipeline.run_and_aggregate_from_json(input_data)
+                df_results = ml_pipeline.run_and_aggregate_from_json(input_data)
                 
                 # Обрабатываем результаты ML пайплайна
                 for review_id in df_results['review_id'].unique():
@@ -235,39 +233,40 @@ async def predict_file(file: UploadFile = File(...)):
                     
                     # Извлекаем предсказания BERT (тональность по продуктам)
                     bert_predictions = review_data.get('pred_agg', {})
+                    topics = []
+                    sentiments = []
+                    
                     if isinstance(bert_predictions, dict) and bert_predictions:
-                        sentiments = list(bert_predictions.values())
-                        predicted_sentiment = max(set(sentiments), key=sentiments.count) if sentiments else "нейтрально"
-                        predicted_products = list(bert_predictions.keys())
-                        confidence = len([s for s in sentiments if s == predicted_sentiment]) / len(sentiments) if sentiments else 0.0
-                    else:
-                        predicted_sentiment = "нейтрально"
-                        predicted_products = []
-                        confidence = 0.0
-
-                    # Добавляем TF-IDF предсказания как дополнительные продукты
+                        # Извлекаем темы и тональности из BERT
+                        for topic, sentiment in bert_predictions.items():
+                            if topic and topic.strip():
+                                topics.append(str(topic))
+                                sentiments.append(str(sentiment))
+                    
+                    # Добавляем TF-IDF предсказания как дополнительные темы
                     tfidf_predictions = review_data.get('pred_tfidf_agg', [])
                     if isinstance(tfidf_predictions, list):
-                        predicted_products.extend(tfidf_predictions)
-
-                    # Убираем дубликаты и пустые значения
-                    predicted_products = list(set([p for p in predicted_products if p and p.strip()]))
-                    if not predicted_products:
-                        predicted_products = ["Общий банковский продукт"]
-
-                    # Находим оригинальный текст
-                    original_item = next((item for item in validated_data.data if str(item.id) == str(review_id)), None)
-                    original_text = original_item.text if original_item else ""
-
-                    processed_items.append({
-                        "id": int(review_id),
-                        "text": str(original_text),
-                        "predicted_sentiment": str(predicted_sentiment),
-                        "confidence": float(round(confidence, 3)),
-                        "predicted_products": [str(p) for p in predicted_products[:5]],
-                        "bert_details": {str(k): str(v) for k, v in bert_predictions.items()} if isinstance(bert_predictions, dict) else {},
-                        "tfidf_products": [str(p) for p in tfidf_predictions] if isinstance(tfidf_predictions, list) else []
-                    })
+                        for tfidf_topic in tfidf_predictions:
+                            if tfidf_topic and tfidf_topic.strip() and tfidf_topic not in topics:
+                                topics.append(str(tfidf_topic))
+                                sentiments.append("нейтрально")  # Для TF-IDF тем используем нейтральную тональность
+                    
+                    # Если ничего не найдено, используем заглушку
+                    if not topics:
+                        topics = ["Общий банковский продукт"]
+                        sentiments = ["нейтрально"]
+                    
+                    # Ограничиваем количество тем (максимум 5)
+                    if len(topics) > 5:
+                        topics = topics[:5]
+                        sentiments = sentiments[:5]
+                    
+                    prediction = PredictionItem(
+                        id=review_id,
+                        topics=topics,
+                        sentiments=sentiments
+                    )
+                    predictions.append(prediction)
                 
                 logger.info(f"ML обработка завершена для {len(predictions)} отзывов")
                 
@@ -275,21 +274,14 @@ async def predict_file(file: UploadFile = File(...)):
                 logger.error(f"Ошибка ML обработки: {e}")
                 # Fallback на заглушку при ошибке ML
                 for item in validated_data.data:
-                    processed_items.append({
-                        "id": item.id,
-                        "text": item.text,
-                        "predicted_sentiment": "нейтрально",
-                        "confidence": 0.0,
-                        "predicted_products": ["Общий банковский продукт"],
-                        "error": f"Ошибка ML обработки: {str(e)}"
-                    })
+                    prediction = PredictionItem(
+                        id=item.id,
+                        topics=["Общий банковский продукт"],
+                        sentiments=["нейтрально"]
+                    )
+                    predictions.append(prediction)
         
-        response = PredictResponse(
-            success=True,
-            message="Файл успешно обработан",
-            data=processed_items,
-            total_items=len(processed_items)
-        )
+        response = PredictResponse(predictions=predictions)
         
         
         return JSONResponse(
