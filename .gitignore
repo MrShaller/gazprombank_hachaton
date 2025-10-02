@@ -1,7 +1,12 @@
 # Большие файлы данных
 data/raw/**/*.json
 !data/raw/**/README.md
-models/xlmr/
+
+# Игнорируем всё внутри папки
+models/xlmr/*
+# Но оставляем .gitkeep
+!models/xlmr/model.txt
+
 # Python
 __pycache__/
 *.py[cod]
