@@ -10,6 +10,8 @@ from ..crud import AspectsCRUD
 from ..schemas import ProductAspectsResponse, ProductsAspectsResponse
 
 router = APIRouter(tags=["aspects"])
+router = APIRouter(tags=["aspects"])
+
 
 @router.get("/product/{product_id}", response_model=ProductAspectsResponse)
 def get_product_aspects(

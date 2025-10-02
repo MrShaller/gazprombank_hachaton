@@ -12,6 +12,7 @@ from ..schemas import Review
 
 router = APIRouter(tags=["reviews"])
 
+
 @router.get("/", response_model=List[Review])
 def get_reviews(
     skip: int = Query(0, ge=0, description="Количество записей для пропуска"),

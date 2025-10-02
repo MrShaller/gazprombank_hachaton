@@ -12,16 +12,21 @@ import types
 from typing import Dict, Any, List
 import asyncio
 import threading
+import asyncio
+import threading
 from pydantic import ValidationError
 
-from ..schemas import FileUploadData, PredictResponse, ErrorResponse
+from ..schemas import FileUploadData, PredictResponse, ErrorResponse, PredictionItem
 from ..ml.pipeline import InferencePipeline
 from ..ml.utils import tokenize_lemma
 from pathlib import Path
 import os
 import time
+import time
 
 MODELS_DIR = Path(os.getenv("MODELS_PATH", "/app/models"))
+ml_pipeline = None  # глобальная ссылка на ML пайплайн
+_pipeline_lock = threading.Lock()
 ml_pipeline = None  # глобальная ссылка на ML пайплайн
 _pipeline_lock = threading.Lock()
 
@@ -38,7 +43,17 @@ import __main__
 __main__.tokenize_lemma = tokenize_lemma
 
 def get_pipeline() -> InferencePipeline | None:
+def get_pipeline() -> InferencePipeline | None:
     global ml_pipeline
+    if ml_pipeline is not None:
+        return ml_pipeline
+    # Потокобезопасная одноразовая инициализация
+    with _pipeline_lock:
+        if ml_pipeline is not None:
+            return ml_pipeline
+        try:
+            logger.info("Инициализация ML пайплайна...")
+            ml_pipeline_local = InferencePipeline(
     if ml_pipeline is not None:
         return ml_pipeline
     # Потокобезопасная одноразовая инициализация
@@ -53,11 +68,15 @@ def get_pipeline() -> InferencePipeline | None:
             )
             ml_pipeline = ml_pipeline_local
             logger.info("✅ ML пайплайн успешно инициализирован")
+            ml_pipeline = ml_pipeline_local
+            logger.info("✅ ML пайплайн успешно инициализирован")
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации ML пайплайна: {e}")
             ml_pipeline = None
         return ml_pipeline
+        return ml_pipeline
 
+router = APIRouter(tags=["predict"])
 router = APIRouter(tags=["predict"])
 
 @router.post("", response_model=PredictResponse, responses={
@@ -200,6 +219,8 @@ async def predict_file(file: UploadFile = File(...)):
         
         logger.info(f"Получен валидный файл {file.filename} с {len(validated_data.data)} записями")
         
+        predictions = []
+
         # Инициализируем/получаем ML пайплайн
         pipeline = get_pipeline()
         if pipeline is None:
@@ -208,6 +229,7 @@ async def predict_file(file: UploadFile = File(...)):
             logger.info("ML пайплайн доступен, начинаем обработку")
         
         # Обработка ML моделями
+        if pipeline is None:
         if pipeline is None:
             # Fallback на заглушку, если ML пайплайн не инициализирован
             logger.warning("ML пайплайн недоступен, используется заглушка")
@@ -227,6 +249,12 @@ async def predict_file(file: UploadFile = File(...)):
                 # Подготавливаем данные для ML пайплайна
                 input_data = [{"id": item.id, "text": item.text} for item in validated_data.data]
                 
+                # Запускаем ML пайплайн с агрегацией в пуле потоков (не блокируем event loop)
+                loop = asyncio.get_running_loop()
+                t0 = time.time()
+                logger.info(f"[PREDICT] run_and_aggregate_from_json start, items={len(input_data)}")
+                df_results = await loop.run_in_executor(None, pipeline.run_and_aggregate_from_json, input_data)
+                logger.info(f"[PREDICT] run_and_aggregate_from_json done in {time.time() - t0:.3f}s")
                 # Запускаем ML пайплайн с агрегацией в пуле потоков (не блокируем event loop)
                 loop = asyncio.get_running_loop()
                 t0 = time.time()
@@ -284,22 +312,15 @@ async def predict_file(file: UploadFile = File(...)):
                 # Fallback на заглушку при ошибке ML
                 processed_items = []
                 for item in validated_data.data:
-                    processed_item = {
-                        "id": int(item.id) if hasattr(item.id, 'item') else item.id,
-                        "text": str(item.text),
-                        "predicted_sentiment": "нейтрально",
-                        "confidence": 0.0,
-                        "predicted_products": ["Общий банковский продукт"],
-                        "error": f"Ошибка ML обработки: {str(e)}"
-                    }
-                    processed_items.append(processed_item)
+                    prediction = PredictionItem(
+                        id=item.id,
+                        topics=["Общий банковский продукт"],
+                        sentiments=["нейтрально"]
+                    )
+                    predictions.append(prediction)
+
+        response = PredictResponse(predictions=predictions)
         
-        response = PredictResponse(
-            success=True,
-            message="Файл успешно обработан",
-            data=processed_items,
-            total_items=len(processed_items)
-        )
         
         return JSONResponse(
             content=response.dict(),

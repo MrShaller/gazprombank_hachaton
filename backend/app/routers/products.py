@@ -11,6 +11,7 @@ from ..schemas import Product, ProductCreate
 
 router = APIRouter(tags=["products"])
 
+
 @router.get("/", response_model=List[Product])
 def get_products(
     skip: int = Query(0, ge=0, description="Количество записей для пропуска"),
