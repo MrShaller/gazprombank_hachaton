@@ -179,7 +179,7 @@ export default function Dashboard() {
                   Проблема с подключением к API
                 </h3>
                 <p className="text-sm text-red-600 mt-1">
-                  Убедитесь, что backend сервер запущен на http://localhost:8000
+                  Убедитесь, что backend сервер запущен на {process.env.NEXT_PUBLIC_API_URL}
                 </p>
               </div>
             </div>

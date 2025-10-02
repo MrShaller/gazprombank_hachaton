@@ -16,11 +16,10 @@ import type {
   ProductAspectsResponse,
 } from '@/types/api';
 
-// Конфигурация API клиента
-// Временно используем прямое подключение из-за проблем с прокси
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+// Всегда используем относительный путь
+const API_BASE_URL = '/api/v1';
 
-console.log('API_BASE_URL:', API_BASE_URL); // Для отладки
+console.log('API_BASE_URL:', API_BASE_URL);
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

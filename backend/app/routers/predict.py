@@ -14,6 +14,11 @@ from pydantic import ValidationError
 from ..schemas import FileUploadData, PredictResponse, ErrorResponse
 from ..ml.pipeline import InferencePipeline
 from ..ml.utils import tokenize_lemma
+from pathlib import Path
+import os
+
+MODELS_DIR = Path(os.getenv("MODELS_PATH", "/app/models"))
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +35,8 @@ __main__.tokenize_lemma = tokenize_lemma
 try:
     logger.info("Инициализация ML пайплайна...")
     ml_pipeline = InferencePipeline(
-        tfidf_path="../models/tfidf_lr/model.pkl",
-        xlmr_path="../models/xlmr"
+        tfidf_path=MODELS_DIR / "tfidf_lr/model.pkl",
+        xlmr_path=MODELS_DIR / "xlmr"
     )
     logger.info("✅ ML пайплайн успешно инициализирован")
 except Exception as e:

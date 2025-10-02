@@ -1,32 +1,33 @@
-# Dockerfile для FastAPI backend
-FROM python:3.13-slim
+FROM python:3.11-slim
 
-# Установка системных зависимостей
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Создание рабочей директории
 WORKDIR /app
 
-# Копирование файлов зависимостей
-COPY requirements.txt .
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev python3-dev build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Установка Python зависимостей
+# Установка python-зависимостей
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копирование кода приложения
-COPY . .
+# Загружаем NLTK стоп-слова
+RUN python -m nltk.downloader stopwords
 
-# Создание пользователя для безопасности
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Копируем код backend
+COPY backend ./backend
 
-# Открытие порта
+# Копируем scripts (они должны быть в /app/scripts)
+COPY scripts ./scripts
+
+# Рабочая директория = backend
+WORKDIR /app/backend
+
 EXPOSE 8000
 
-# Команда по умолчанию
+# Запуск uvicorn (или меняй на run_server.py, если там своя логика)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
