@@ -2,6 +2,10 @@
 
 Backend для дашборда анализа клиентских отзывов о продуктах Газпромбанка.
 
+## 🌐 **Production**
+**🚀 API доступно по адресу**: http://itsfour-solution.ru/api/v1/  
+**📚 Документация**: http://itsfour-solution.ru/api/docs
+
 ## 🚀 Быстрый старт
 
 ### 1. Установка зависимостей
@@ -235,8 +239,13 @@ python test_api.py
 curl http://localhost:8000/api/v1/products/stats
 curl "http://localhost:8000/api/v1/analytics/tonality?product_id=1"
 
-# Тестирование ML API
+# Тестирование ML API (локально)
 curl -X POST "http://localhost:8000/api/v1/predict/" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@test_reviews.json"
+
+# Тестирование ML API (production)
+curl -X POST "http://itsfour-solution.ru/api/v1/predict/" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@test_reviews.json"
 ```
