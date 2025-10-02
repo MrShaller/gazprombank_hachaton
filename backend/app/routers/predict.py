@@ -385,7 +385,7 @@ async def predict_file(file: UploadFile = File(...)):
 
         # Создаем результирующий JSON
         result = {
-            "predictions": [pred.dict() for pred in predictions],
+            "predictions": predictions,
             "metadata": {
                 "processed_at": datetime.now().isoformat(),
                 "total_items": len(predictions),
