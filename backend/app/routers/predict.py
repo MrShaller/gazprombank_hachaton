@@ -45,7 +45,7 @@ except Exception as e:
 
 router = APIRouter(prefix="/predict", tags=["predict"])
 
-@router.post("/", response_model=PredictResponse, responses={
+@router.post("", response_model=PredictResponse, responses={
     400: {"model": ErrorResponse},
     422: {"model": ErrorResponse},
     500: {"model": ErrorResponse}

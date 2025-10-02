@@ -79,7 +79,6 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gazprombank_reviews
     volumes:
       - ./data:/app/data:ro
-      - ./models:/app/models:ro
     networks:
       - gazprombank_network
     depends_on:
